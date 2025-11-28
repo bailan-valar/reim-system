@@ -6,7 +6,10 @@
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
         @click.self="close"
       >
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+          class="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto"
+          :class="modalSizeClass"
+        >
           <!-- Header -->
           <div class="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 class="text-xl font-semibold text-gray-900">
@@ -39,14 +42,27 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean
   title?: string
-}>()
+  size?: 'small' | 'medium' | 'large' | 'xlarge'
+}>(), {
+  size: 'medium'
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
+
+const modalSizeClass = computed(() => {
+  const sizeMap = {
+    small: 'max-w-md',
+    medium: 'max-w-2xl',
+    large: 'max-w-4xl',
+    xlarge: 'max-w-6xl'
+  }
+  return sizeMap[props.size]
+})
 
 const close = () => {
   emit('update:modelValue', false)
