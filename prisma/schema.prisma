@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Company {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  reimbursements Reimbursement[]
+
+  @@map("companies")
+}
+
+model Reimbursement {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("待整理") // 待整理, 待打印单据, 待审批, 待打款, 已完成
+  totalAmount Float     @default(0)
+  startDate   DateTime? // 开始日期
+  endDate     DateTime? // 结束日期
+  companyId   String?   // 所属公司
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items   ExpenseItem[]
+  company Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@map("reimbursements")
+  @@index([companyId])
+}
+
+model ExpenseItem {
+  id              String   @id @default(uuid())
+  reimbursementId String
+  amount          Float
+  date            DateTime
+  description     String?
+  category        String   // 交通, 餐饮, 住宿, 办公, 其他
+  invoiceFileName String?
+  invoiceFilePath String?
+  hasInvoice      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reimbursement   Reimbursement @relation(fields: [reimbursementId], references: [id], onDelete: Cascade)
+
+  @@map("expense_items")
+  @@index([reimbursementId])
+}

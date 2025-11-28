@@ -1,0 +1,18 @@
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "sk-ant-oat01-sr42w4dr4v78gF2EpUY1bdfwHUvpyD2IqgZYMH4JDtgYIgGk5F3MTBbs7P7Gu3ryU8UXYYRhFaLMNTUfi67sHgTvlgyesAA",
+    "ANTHROPIC_BASE_URL": "https://code.newcli.com/claude/aws"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(rm:*)",
+      "Bash(npm install)",
+      "Bash(npm install --force)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": []
+  },
+  "apiKeyHelper": "echo 'sk-ant-oat01-sr42w4dr4v78gF2EpUY1bdfwHUvpyD2IqgZYMH4JDtgYIgGk5F3MTBbs7P7Gu3ryU8UXYYRhFaLMNTUfi67sHgTvlgyesAA'"
+}
