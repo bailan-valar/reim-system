@@ -11,12 +11,13 @@
       <input
         ref="fileInput"
         type="file"
-        accept=".pdf,.png,.jpg,.jpeg"
+        accept=".pdf,.png,.jpg,.jpeg,.ofd"
+        multiple
         class="hidden"
         @change="handleFileSelect"
       />
 
-      <div v-if="!selectedFile">
+      <div v-if="selectedFiles.length === 0">
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
@@ -31,26 +32,39 @@
           </button>
         </p>
         <p class="mt-1 text-xs text-gray-500">
-          支持 PDF, PNG, JPG, JPEG (最大 10MB)
+          支持 PDF, PNG, JPG, JPEG, OFD (最大 10MB)，可选择多个文件
         </p>
       </div>
 
       <div v-else class="space-y-3">
-        <div class="flex items-center justify-center gap-2">
-          <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <div class="text-left">
-            <p class="text-sm font-medium text-gray-900">{{ selectedFile.name }}</p>
-            <p class="text-xs text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+        <div class="text-sm text-gray-600 mb-2">已选择 {{ selectedFiles.length }} 个文件</div>
+        <div class="space-y-2 max-h-48 overflow-y-auto">
+          <div v-for="(file, index) in selectedFiles" :key="index"
+               class="flex items-center justify-between p-2 bg-gray-50 rounded">
+            <div class="flex items-center gap-2">
+              <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <div class="text-left">
+                <p class="text-sm font-medium text-gray-900">{{ file.name }}</p>
+                <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="text-sm text-red-600 hover:text-red-700"
+              @click="removeFile(index)"
+            >
+              移除
+            </button>
           </div>
         </div>
         <button
           type="button"
-          class="text-sm text-red-600 hover:text-red-700"
-          @click="clearFile"
+          class="text-sm text-primary-600 hover:text-primary-700"
+          @click="fileInput?.click()"
         >
-          移除文件
+          + 添加更多文件
         </button>
       </div>
     </div>
@@ -85,9 +99,9 @@
       <UiButton
         type="button"
         @click="handleUpload"
-        :disabled="!selectedFile || uploading"
+        :disabled="selectedFiles.length === 0 || uploading"
       >
-        {{ uploading ? '上传中...' : '上传' }}
+        {{ uploading ? '上传中...' : `上传 (${selectedFiles.length})` }}
       </UiButton>
     </div>
   </div>
@@ -96,6 +110,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   itemId: string
+  reimbursementId: string
 }>()
 
 const emit = defineEmits<{
@@ -104,52 +119,59 @@ const emit = defineEmits<{
 }>()
 
 const fileInput = ref<HTMLInputElement>()
-const selectedFile = ref<File | null>(null)
+const selectedFiles = ref<File[]>([])
 const dragActive = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 const error = ref('')
 
-const { uploadInvoice } = useFileUpload()
+const { uploadInvoices } = useInvoices()
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    validateAndSetFile(file)
-  }
+  const files = Array.from(target.files || [])
+  files.forEach(file => validateAndAddFile(file))
 }
 
 const handleDrop = (event: DragEvent) => {
   dragActive.value = false
-  const file = event.dataTransfer?.files[0]
-  if (file) {
-    validateAndSetFile(file)
-  }
+  const files = Array.from(event.dataTransfer?.files || [])
+  files.forEach(file => validateAndAddFile(file))
 }
 
-const validateAndSetFile = (file: File) => {
+const validateAndAddFile = (file: File) => {
   error.value = ''
 
   // Check file type
-  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+  const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'application/ofd', 'application/x-ofd']
   if (!allowedTypes.includes(file.type)) {
-    error.value = '不支持的文件类型。请上传 PDF, PNG, JPG 或 JPEG 文件'
+    error.value = '不支持的文件类型。请上传 PDF, PNG, JPG, JPEG 或 OFD 文件'
     return
   }
 
   // Check file size (10MB)
   const maxSize = 10 * 1024 * 1024
   if (file.size > maxSize) {
-    error.value = '文件大小超过限制 (最大 10MB)'
+    error.value = `文件 ${file.name} 大小超过限制 (最大 10MB)`
     return
   }
 
-  selectedFile.value = file
+  // Check if file already exists
+  if (selectedFiles.value.some(f => f.name === file.name && f.size === file.size)) {
+    error.value = `文件 ${file.name} 已存在`
+    return
+  }
+
+  selectedFiles.value.push(file)
 }
 
-const clearFile = () => {
-  selectedFile.value = null
+const removeFile = (index: number) => {
+  selectedFiles.value.splice(index, 1)
+  error.value = ''
+}
+
+const clearFiles = () => {
+  selectedFiles.value = []
   error.value = ''
   if (fileInput.value) {
     fileInput.value.value = ''
@@ -157,7 +179,7 @@ const clearFile = () => {
 }
 
 const handleUpload = async () => {
-  if (!selectedFile.value) return
+  if (selectedFiles.value.length === 0) return
 
   uploading.value = true
   uploadProgress.value = 0
@@ -171,7 +193,7 @@ const handleUpload = async () => {
   }, 200)
 
   try {
-    await uploadInvoice(selectedFile.value, props.itemId)
+    await uploadInvoices(props.reimbursementId, props.itemId, selectedFiles.value)
     uploadProgress.value = 100
 
     setTimeout(() => {

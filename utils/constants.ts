@@ -30,6 +30,6 @@ export const STATUS_COLORS: Record<ReimbursementStatus, string> = {
 }
 
 // File upload constants
-export const ALLOWED_FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+export const ALLOWED_FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'application/ofd', 'application/x-ofd']
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 export const UPLOAD_DIR = '/uploads/invoices'

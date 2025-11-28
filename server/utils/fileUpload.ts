@@ -2,18 +2,20 @@ import { writeFile, unlink, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '~/utils/constants'
+import { parseInvoice, type InvoiceData } from './invoiceParser'
 
 export interface UploadedFile {
   fileName: string
   filePath: string
   size: number
   type: string
+  invoiceData?: InvoiceData | null
 }
 
 export async function validateFile(file: File): Promise<void> {
   // Check file type
   if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-    throw new Error(`不支持的文件类型。允许的类型: PDF, PNG, JPG, JPEG`)
+    throw new Error(`不支持的文件类型。允许的类型: PDF, PNG, JPG, JPEG, OFD`)
   }
 
   // Check file size
@@ -23,13 +25,18 @@ export async function validateFile(file: File): Promise<void> {
 }
 
 export async function saveFile(file: File, itemId: string): Promise<UploadedFile> {
+  console.log(`[FILE-UPLOAD] Starting file upload for item ${itemId}`)
+  console.log(`[FILE-UPLOAD] File name: ${file.name}, size: ${file.size} bytes, type: ${file.type}`)
+
   // Validate file
   await validateFile(file)
+  console.log(`[FILE-UPLOAD] File validation passed`)
 
   // Create upload directory if it doesn't exist
   const uploadDir = join(process.cwd(), 'public', 'uploads', 'invoices')
   if (!existsSync(uploadDir)) {
     await mkdir(uploadDir, { recursive: true })
+    console.log(`[FILE-UPLOAD] Created upload directory: ${uploadDir}`)
   }
 
   // Generate unique filename
@@ -42,12 +49,34 @@ export async function saveFile(file: File, itemId: string): Promise<UploadedFile
   // Convert file to buffer and save
   const buffer = Buffer.from(await file.arrayBuffer())
   await writeFile(filePath, buffer)
+  console.log(`[FILE-UPLOAD] File saved to: ${filePath}`)
+
+  // Parse invoice data
+  let invoiceData: InvoiceData | null = null
+  try {
+    console.log(`[FILE-UPLOAD] Starting invoice parsing...`)
+    invoiceData = await parseInvoice(buffer, file.type)
+
+    if (invoiceData) {
+      console.log(`[FILE-UPLOAD] ✓ Invoice parsing successful:`)
+      console.log(`[FILE-UPLOAD]   - Amount: ${invoiceData.amount}`)
+      console.log(`[FILE-UPLOAD]   - Date: ${invoiceData.date.toISOString().split('T')[0]}`)
+      console.log(`[FILE-UPLOAD]   - Category: ${invoiceData.category}`)
+      console.log(`[FILE-UPLOAD]   - Description: ${invoiceData.description}`)
+    } else {
+      console.warn(`[FILE-UPLOAD] ⚠ Invoice parsing returned null - could not recognize invoice format`)
+    }
+  } catch (error) {
+    console.error(`[FILE-UPLOAD] ✗ Invoice parsing failed:`, error)
+    // Don't throw error - allow file upload to succeed even if parsing fails
+  }
 
   return {
     fileName,
     filePath: `/uploads/invoices/${fileName}`,
     size: file.size,
-    type: file.type
+    type: file.type,
+    invoiceData
   }
 }
 

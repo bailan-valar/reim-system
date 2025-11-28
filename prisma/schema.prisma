@@ -40,20 +40,36 @@ model Reimbursement {
 }
 
 model ExpenseItem {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   reimbursementId String
-  amount          Float
+  amount          Float     // 用户定义的费用金额
   date            DateTime
   description     String?
-  category        String   // 交通, 餐饮, 住宿, 办公, 其他
-  invoiceFileName String?
-  invoiceFilePath String?
-  hasInvoice      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  category        String    // 交通, 餐饮, 住宿, 办公, 其他
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   reimbursement   Reimbursement @relation(fields: [reimbursementId], references: [id], onDelete: Cascade)
+  invoices        Invoice[]     // 一对多关系
 
   @@map("expense_items")
   @@index([reimbursementId])
+}
+
+model Invoice {
+  id              String      @id @default(uuid())
+  expenseItemId   String
+  fileName        String
+  filePath        String
+  amount          Float       // 发票金额
+  date            DateTime    // 发票日期
+  description     String?     // 发票描述（从OCR识别）
+  uploadedAt      DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  expenseItem     ExpenseItem @relation(fields: [expenseItemId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+  @@index([expenseItemId])
 }

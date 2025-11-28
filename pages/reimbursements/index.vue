@@ -10,9 +10,17 @@
             </NuxtLink>
             <h1 class="text-3xl font-bold text-gray-900">报销单列表</h1>
           </div>
-          <UiButton @click="navigateTo('/reimbursements/new')">
-            创建报销单
-          </UiButton>
+          <div class="flex gap-3">
+            <UiButton
+              variant="secondary"
+              @click="showCreateFromInvoicesModal = true"
+            >
+              从发票创建
+            </UiButton>
+            <UiButton @click="navigateTo('/reimbursements/new')">
+              创建报销单
+            </UiButton>
+          </div>
         </div>
       </div>
     </header>
@@ -25,6 +33,13 @@
         @filter="handleFilter"
       />
     </main>
+
+    <!-- Create from Invoices Modal -->
+    <ReimbursementCreateFromInvoicesModal
+      v-model="showCreateFromInvoicesModal"
+      @success="handleCreateSuccess"
+      @cancel="showCreateFromInvoicesModal = false"
+    />
   </div>
 </template>
 
@@ -35,6 +50,12 @@ const { fetchReimbursements } = useReimbursements()
 
 const loading = ref(true)
 const reimbursements = ref<Reimbursement[]>([])
+const showCreateFromInvoicesModal = ref(false)
+
+const handleCreateSuccess = (reimbursementId: string) => {
+  showCreateFromInvoicesModal.value = false
+  navigateTo(`/reimbursements/${reimbursementId}`)
+}
 
 const loadReimbursements = async (status?: string, sortBy?: string, order?: string) => {
   loading.value = true

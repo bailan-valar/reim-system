@@ -10,6 +10,9 @@
           <div class="flex items-center justify-between">
             <h1 class="text-3xl font-bold text-gray-900">报销单详情</h1>
             <div class="flex gap-3">
+              <UiButton @click="showBulkUploadModal = true">
+                上传发票
+              </UiButton>
               <UiButton variant="secondary" @click="showEditModal = true">
                 编辑
               </UiButton>
@@ -55,8 +58,9 @@
               <div>
                 <p class="text-sm text-gray-600">发票状态</p>
                 <p class="text-2xl font-bold text-gray-900">
-                  {{ invoiceCount }}/{{ reimbursement.items?.length || 0 }}
+                  {{ invoiceStats.itemsWithInvoices }}/{{ invoiceStats.totalItems }} 项
                 </p>
+                <p class="text-xs text-gray-500">{{ invoiceStats.totalInvoices }} 张发票</p>
               </div>
             </div>
 
@@ -131,8 +135,18 @@
       <ExpenseInvoiceUpload
         v-if="uploadingItem"
         :item-id="uploadingItem.id"
+        :reimbursement-id="id"
         @success="handleUploadSuccess"
         @cancel="showUploadModal = false"
+      />
+    </UiModal>
+
+    <!-- Bulk Upload Invoice Modal -->
+    <UiModal v-model="showBulkUploadModal" title="批量上传发票">
+      <ExpenseBulkInvoiceUpload
+        :reimbursement-id="id"
+        @success="handleBulkUploadSuccess"
+        @cancel="showBulkUploadModal = false"
       />
     </UiModal>
   </div>
@@ -148,7 +162,7 @@ const id = route.params.id as string
 
 const { fetchReimbursement, updateReimbursement, deleteReimbursement } = useReimbursements()
 const { createExpenseItem, updateExpenseItem, deleteExpenseItem } = useExpenseItems()
-const { deleteInvoice } = useFileUpload()
+const { deleteInvoice: deleteInvoiceApi } = useInvoices()
 
 const loading = ref(true)
 const updating = ref(false)
@@ -158,11 +172,26 @@ const reimbursement = ref<Reimbursement | null>(null)
 const showEditModal = ref(false)
 const showAddItemModal = ref(false)
 const showUploadModal = ref(false)
+const showBulkUploadModal = ref(false)
 const editingItem = ref<ExpenseItem | null>(null)
 const uploadingItem = ref<ExpenseItem | null>(null)
 
-const invoiceCount = computed(() => {
-  return reimbursement.value?.items?.filter(item => item.hasInvoice).length || 0
+const invoiceStats = computed(() => {
+  const items = reimbursement.value?.items || []
+  const totalItems = items.length
+  const itemsWithInvoices = items.filter(item =>
+    item.invoices && item.invoices.length > 0
+  ).length
+  const totalInvoices = items.reduce((sum, item) =>
+    sum + (item.invoices?.length || 0), 0
+  )
+
+  return {
+    totalItems,
+    itemsWithInvoices,
+    totalInvoices,
+    uploadRate: totalItems > 0 ? (itemsWithInvoices / totalItems * 100).toFixed(0) : 0
+  }
 })
 
 const loadReimbursement = async () => {
@@ -245,12 +274,22 @@ const handleUploadSuccess = async () => {
   await loadReimbursement()
 }
 
-const handleDeleteInvoice = async (item: ExpenseItem) => {
+const handleBulkUploadSuccess = async () => {
+  showBulkUploadModal.value = false
+  await loadReimbursement()
+}
+
+const handleDeleteInvoice = async (invoice: any) => {
   if (!confirm('确定要删除此发票吗？')) return
 
   try {
-    if (item.invoiceFileName) {
-      await deleteInvoice(item.invoiceFileName, item.id)
+    // 找到包含此发票的费用项目
+    const item = reimbursement.value?.items?.find(i =>
+      i.invoices?.some(inv => inv.id === invoice.id)
+    )
+
+    if (item) {
+      await deleteInvoiceApi(id, item.id, invoice.id)
       await loadReimbursement()
     }
   } catch (error: any) {

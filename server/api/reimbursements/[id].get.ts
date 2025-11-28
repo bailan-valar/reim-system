@@ -15,6 +15,9 @@ export default defineEventHandler(async (event) => {
       where: { id },
       include: {
         items: {
+          include: {
+            invoices: true
+          },
           orderBy: {
             date: 'desc'
           }

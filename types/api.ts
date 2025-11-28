@@ -15,3 +15,16 @@ export interface UploadResponse {
   filePath: string
   itemId: string
 }
+
+export interface BulkInvoiceUploadResponse {
+  success: number
+  failed: number
+  results: Array<{
+    invoice: any
+    fileName: string
+  }>
+  errors: Array<{
+    fileName: string
+    error: string
+  }>
+}
