@@ -22,127 +22,146 @@
           <div class="w-32"></div>
         </div>
 
-        <!-- 主表格 -->
-        <table class="reimbursement-table w-full border-collapse border-2 border-gray-800">
-          <!-- 表头 -->
-          <thead>
-            <tr>
-              <th rowspan="2" colspan="2" class="border border-gray-800 p-2 bg-gray-50 align-middle">发生日期</th>
-              <th rowspan="2" class="border border-gray-800 p-2 bg-gray-50 align-middle w-64">报销内容</th>
-              <th rowspan="2" class="border border-gray-800 p-2 bg-gray-50 align-middle w-20">单据<br />张数</th>
-              <th colspan="9" class="border border-gray-800 p-2 bg-gray-50">金额</th>
-              <th rowspan="2" class="border border-gray-800 p-2 bg-gray-50 align-middle w-24">备注</th>
-              <th rowspan="2" class="border border-gray-800 p-2 bg-gray-50 align-middle w-12">附<br />件<br /><br />张</th>
-            </tr>
-            <tr class="sub-header text-sm">
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">百</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">十</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">万</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">千</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">百</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">十</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">元</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">角</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-8">分</th>
-            </tr>
-            <tr class="sub-header text-sm">
-              <th class="border border-gray-800 p-1 bg-gray-50 w-10">月</th>
-              <th class="border border-gray-800 p-1 bg-gray-50 w-10">日</th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-              <th class="border border-gray-800 p-1 bg-gray-50"></th>
-            </tr>
-          </thead>
+        <!-- 表格和附件区域的容器 -->
+        <div class="table-with-attachment flex">
+          <!-- 主表格 -->
+          <table class="reimbursement-table flex-1 border-collapse border-2 border-gray-800"
+            style="table-layout: fixed;">
+            <!-- 表头 -->
+            <thead>
+              <tr>
+                <th colspan="2" class="border border-gray-800 p-1 bg-gray-50 text-sm" style="width: 60px;">发生日期</th>
+                <th colspan="11" class="border border-gray-800 p-1 bg-gray-50 text-sm">报 销 内 容</th>
+                <th class="border border-gray-800 p-1 bg-gray-50 text-sm" style="width: 50px;">单据张数</th>
+                <th colspan="9" class="border border-gray-800 p-1 bg-gray-50 text-sm">金额</th>
+                <th colspan="3" class="border border-gray-800 p-1 bg-gray-50 text-sm" style="width: 80px;">备注</th>
+              </tr>
+              <tr class="sub-header text-xs">
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 30px;">月</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 30px;">日</th>
+                <th colspan="11" class="border border-gray-800 p-0.5 bg-gray-50"></th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50"></th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">百</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">十</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">万</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">千</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">百</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">十</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">元</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">角</th>
+                <th class="border border-gray-800 p-0.5 bg-gray-50" style="width: 28px;">分</th>
+                <th colspan="3" class="border border-gray-800 p-0.5 bg-gray-50"></th>
+              </tr>
+            </thead>
 
-          <!-- 明细行 -->
-          <tbody>
-            <tr v-for="(item, index) in editableData.items" :key="index" class="detail-row">
-              <td class="border border-gray-800 p-1 text-center w-10">
-                <input v-model="item.month" type="text" class="w-full text-center outline-none" maxlength="2" />
-              </td>
-              <td class="border border-gray-800 p-1 text-center w-10">
-                <input v-model="item.day" type="text" class="w-full text-center outline-none" maxlength="2" />
-              </td>
-              <td class="border border-gray-800 p-1">
-                <input v-model="item.description" type="text" class="w-full outline-none" />
-              </td>
-              <td class="border border-gray-800 p-1 text-center">
-                <input v-model="item.invoiceCount" type="text" class="w-full text-center outline-none"
-                  maxlength="3" />
-              </td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[7] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[6] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[5] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[4] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[3] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[2] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[1] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[0] }}</td>
-              <td class="border border-gray-800 p-1 text-center w-8">{{ item.amountDigits[-1] }}</td>
-              <td class="border border-gray-800 p-1 text-center"></td>
-              <td rowspan="4" class="border border-gray-800 p-1 text-center align-middle" v-if="index === 0"></td>
-            </tr>
+            <!-- 明细行 -->
+            <tbody>
+              <tr v-for="(item, index) in editableData.items" :key="index" class="detail-row" style="height: 36px;">
+                <td class="border border-gray-800 p-0.5 text-center text-sm">
+                  <input v-model="item.month" type="text" class="w-full text-center outline-none text-sm"
+                    maxlength="2" />
+                </td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">
+                  <input v-model="item.day" type="text" class="w-full text-center outline-none text-sm" maxlength="2" />
+                </td>
+                <td colspan="11" class="border border-gray-800 p-0.5 text-sm">
+                  <input v-model="item.description" type="text" class="w-full outline-none text-sm" />
+                </td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">
+                  <input v-model="item.invoiceCount" type="text" class="w-full text-center outline-none text-sm"
+                    maxlength="3" />
+                </td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[7] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[6] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[5] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[4] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[3] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[2] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[1] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[0] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ item.amountDigits[-1] }}</td>
+                <td colspan="3" class="border border-gray-800 p-0.5 text-center text-sm"></td>
+              </tr>
 
-            <!-- 空行 -->
-            <tr v-for="i in emptyRowCount" :key="`empty-${i}`" class="detail-row">
-              <td class="border border-gray-800 p-1 h-10"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1 text-center"></td>
-            </tr>
-          </tbody>
+              <!-- 空行 -->
+              <tr v-for="i in emptyRowCount" :key="`empty-${i}`" class="detail-row" style="height: 36px;">
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td colspan="11" class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td class="border border-gray-800 p-0.5"></td>
+                <td colspan="3" class="border border-gray-800 p-0.5 text-center"></td>
+              </tr>
+            </tbody>
 
-          <!-- 合计行 -->
-          <tfoot>
-            <tr class="total-row font-bold">
-              <td colspan="3" class="border border-gray-800 p-2">
-                合计人民币（大写）{{ totalAmountChinese }}
-              </td>
-              <td class="border border-gray-800 p-2 text-center">{{ totalInvoiceCount }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[7] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[6] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[5] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[4] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[3] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[2] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[1] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[0] }}</td>
-              <td class="border border-gray-800 p-1 text-center">{{ totalAmountDigits[-1] }}</td>
-              <td class="border border-gray-800 p-1"></td>
-              <td class="border border-gray-800 p-1"></td>
-            </tr>
-            <!-- 签字栏（在表格内） -->
-            <tr class="signature-row">
-              <td colspan="2" class="border border-gray-800 p-2 text-center text-xs">总经理</td>
-              <td colspan="2" class="border border-gray-800 p-2 text-center text-xs">区域或部门<br />分管领导</td>
-              <td colspan="2" class="border border-gray-800 p-2 text-center text-xs">财务部<br />审核</td>
-              <td colspan="2" class="border border-gray-800 p-2 text-center text-xs">区域<br />负责人</td>
-              <td colspan="2" class="border border-gray-800 p-2 text-center text-xs">部门<br />负责人</td>
-              <td colspan="2" class="border border-gray-800 p-2 text-center text-xs">报销人</td>
-              <td colspan="3" class="border border-gray-800 p-2"></td>
-            </tr>
-          </tfoot>
-        </table>
+            <!-- 合计行 -->
+            <tfoot>
+              <tr class="total-row font-bold">
+                <td colspan="13" class="border border-gray-800 p-1 text-sm">
+                  合计人民币（大写）{{ totalAmountChinese }}
+                </td>
+                <td class="border border-gray-800 p-1 text-center text-sm">{{ totalInvoiceCount }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[7] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[6] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[5] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[4] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[3] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[2] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[1] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[0] }}</td>
+                <td class="border border-gray-800 p-0.5 text-center text-sm">{{ totalAmountDigits[-1] }}</td>
+                <td colspan="3" class="border border-gray-800 p-0.5"></td>
+              </tr>
+              <!-- 签字栏（在表格内） -->
+              <tr class="signature-row-in-table">
+                <td colspan="26" class="border-0 p-0">
+                  <div class="signature-section-inner flex items-center py-2 text-xs">
+                    <div class="flex-1 flex justify-between items-center">
+                      <div class="signature-item text-start">
+                        <div class="signature-label">总经理</div>
+                      </div>
+
+                      <div class="signature-item text-center">
+                        <div class="signature-label">区域或部门<br />分管领导</div>
+                      </div>
+                      <div class="signature-item text-center">
+                        <div class="signature-label">财务部<br />审核</div>
+                      </div>
+                      <div class="signature-item text-center">
+                        <div class="signature-label">区域<br />负责人</div>
+                      </div>
+                      <div class="signature-item text-center">
+                        <div class="signature-label">部门<br />负责人</div>
+                      </div>
+                      <div class="signature-item text-center">
+                        <div class="signature-label">报销人</div>
+                      </div>
+                    <div class="signature-spacer" style="width: 1px;"></div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- 附件标识（表格外右侧） -->
+          <div
+            class="attachment-label flex flex-col justify-center items-center border-2 border-l-0 border-gray-800 px-1 text-xs"
+            style="width: 30px;">
+            <span>附</span>
+            <span>件</span>
+            <div class="h-12"></div>
+            <span>张</span>
+          </div>
+        </div>
 
         <!-- 报销日期 -->
         <div class="footer-date text-right mt-4">
@@ -365,6 +384,16 @@ const handlePrint = () => {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
 
+  // 克隆内容并将输入框的值设置为 value 属性
+  const clonedContent = printContent.cloneNode(true) as HTMLElement
+  const inputs = clonedContent.querySelectorAll('input')
+  const originalInputs = printContent.querySelectorAll('input')
+
+  inputs.forEach((input, index) => {
+    const originalInput = originalInputs[index] as HTMLInputElement
+    input.setAttribute('value', originalInput.value)
+  })
+
   // 获取当前页面的所有样式表
   const styles = Array.from(document.styleSheets)
     .map(styleSheet => {
@@ -391,14 +420,27 @@ const handlePrint = () => {
 
           /* 打印专用样式 */
           @page {
-            size: A4;
-            margin: 20mm;
+            size: A4 portrait;
+            margin: 10mm;
           }
 
           @media print {
-            body {
+            html, body {
+              width: 100%;
+              height: 100%;
               margin: 0;
               padding: 0;
+            }
+
+            body {
+              transform-origin: top left;
+            }
+
+            .print-content {
+              width: 100%;
+              max-width: 100%;
+              transform: scale(1);
+              transform-origin: top left;
             }
 
             /* 隐藏输入框边框 */
@@ -421,6 +463,7 @@ const handlePrint = () => {
 
             table {
               page-break-inside: avoid;
+              width: 100%;
             }
           }
 
@@ -456,7 +499,7 @@ const handlePrint = () => {
         </style>
       </head>
       <body>
-        ${printContent.innerHTML}
+        ${clonedContent.innerHTML}
       </body>
     </html>
   `)
