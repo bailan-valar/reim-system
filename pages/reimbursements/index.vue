@@ -19,9 +19,9 @@
             </UiButton>
             <UiButton
               variant="secondary"
-              @click="showCreateFromInvoicesModal = true"
+              @click="showCreateFromInvoiceBoxModal = true"
             >
-              从发票创建
+              从发票箱创建
             </UiButton>
             <UiButton @click="navigateTo('/reimbursements/new')">
               创建报销单
@@ -40,11 +40,11 @@
       />
     </main>
 
-    <!-- Create from Invoices Modal -->
-    <ReimbursementCreateFromInvoicesModal
-      v-model="showCreateFromInvoicesModal"
+    <!-- Create from Invoice Box Modal -->
+    <ReimbursementCreateFromInvoiceBoxModal
+      v-model="showCreateFromInvoiceBoxModal"
       @success="handleCreateSuccess"
-      @cancel="showCreateFromInvoicesModal = false"
+      @cancel="showCreateFromInvoiceBoxModal = false"
     />
   </div>
 </template>
@@ -56,10 +56,10 @@ const { fetchReimbursements } = useReimbursements()
 
 const loading = ref(true)
 const reimbursements = ref<Reimbursement[]>([])
-const showCreateFromInvoicesModal = ref(false)
+const showCreateFromInvoiceBoxModal = ref(false)
 
 const handleCreateSuccess = (reimbursementId: string) => {
-  showCreateFromInvoicesModal.value = false
+  showCreateFromInvoiceBoxModal.value = false
   navigateTo(`/reimbursements/${reimbursementId}`)
 }
 

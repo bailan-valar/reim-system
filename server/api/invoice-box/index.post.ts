@@ -20,6 +20,9 @@ export default defineEventHandler(async (event) => {
     let taxRate: number | null = null
     let taxAmount: number | null = null
     let invoiceDate: string | null = null
+    let buyerName: string | null = null
+    let remark: string | null = null
+    let tags: string | null = null
 
     // Parse form data
     for (const part of formData) {
@@ -37,6 +40,12 @@ export default defineEventHandler(async (event) => {
         taxAmount = parseFloat(part.data.toString())
       } else if (part.name === 'invoiceDate') {
         invoiceDate = part.data.toString()
+      } else if (part.name === 'buyerName') {
+        buyerName = part.data.toString()
+      } else if (part.name === 'remark') {
+        remark = part.data.toString()
+      } else if (part.name === 'tags') {
+        tags = part.data.toString()
       }
     }
 
@@ -76,6 +85,8 @@ export default defineEventHandler(async (event) => {
     const finalInvoiceType = invoiceType || ocrData?.invoiceType || '其他'
     const finalTaxRate = taxRate || ocrData?.taxRate || null
     const finalTaxAmount = taxAmount || ocrData?.taxAmount || null
+    const finalBuyerName = buyerName || ocrData?.buyerName || null
+    const finalRemark = remark || ocrData?.remark || null
 
     // Check if invoice number already exists
     const existingInvoice = await prisma.invoiceBox.findUnique({
@@ -98,6 +109,9 @@ export default defineEventHandler(async (event) => {
         taxRate: finalTaxRate,
         taxAmount: finalTaxAmount,
         invoiceDate: new Date(finalInvoiceDate),
+        buyerName: finalBuyerName,
+        remark: finalRemark,
+        tags: tags || null,
         fileName: uploadedFile.fileName,
         filePath: uploadedFile.filePath,
         status: '未使用'

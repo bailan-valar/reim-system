@@ -81,6 +81,52 @@
         <p class="text-sm text-gray-700">{{ formatDate(invoice.invoiceDate) }}</p>
       </div>
 
+      <div v-if="invoice.buyerName">
+        <p class="text-xs text-gray-500">购买方</p>
+        <p class="text-sm text-gray-700 truncate" :title="invoice.buyerName">{{ invoice.buyerName }}</p>
+      </div>
+
+      <div v-if="invoice.remark">
+        <p class="text-xs text-gray-500">备注</p>
+        <p class="text-sm text-gray-700 line-clamp-2" :title="invoice.remark">{{ invoice.remark }}</p>
+      </div>
+
+      <!-- Tags -->
+      <div v-if="invoice.tags" class="flex flex-wrap gap-1">
+        <span
+          v-for="tag in parseTags(invoice.tags)"
+          :key="tag"
+          class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded"
+        >
+          {{ tag }}
+        </span>
+      </div>
+
+      <!-- Linked Reimbursement Info -->
+      <div v-if="invoice.expenseItem" class="pt-2 border-t">
+        <p class="text-xs text-gray-500 mb-1">关联报销单</p>
+        <div class="bg-blue-50 rounded p-2 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-blue-900 truncate">
+              {{ invoice.expenseItem.reimbursement.title }}
+            </span>
+            <span
+              :class="[
+                'px-2 py-0.5 rounded text-xs',
+                getStatusColor(invoice.expenseItem.reimbursement.status)
+              ]"
+            >
+              {{ invoice.expenseItem.reimbursement.status }}
+            </span>
+          </div>
+          <div class="text-xs text-blue-700">
+            <span>{{ invoice.expenseItem.category }}</span>
+            <span class="mx-1">·</span>
+            <span>¥{{ formatAmount(invoice.expenseItem.amount) }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Attachment indicator -->
       <div class="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,5 +162,21 @@ function formatDate(date: Date | string): string {
     month: '2-digit',
     day: '2-digit'
   })
+}
+
+function parseTags(tags: string | null | undefined): string[] {
+  if (!tags) return []
+  return tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+}
+
+function getStatusColor(status: string): string {
+  const colors: Record<string, string> = {
+    '待整理': 'bg-yellow-100 text-yellow-800',
+    '待打印单据': 'bg-orange-100 text-orange-800',
+    '待审批': 'bg-blue-100 text-blue-800',
+    '待打款': 'bg-purple-100 text-purple-800',
+    '已完成': 'bg-green-100 text-green-800'
+  }
+  return colors[status] || 'bg-gray-100 text-gray-800'
 }
 </script>

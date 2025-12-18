@@ -30,8 +30,9 @@
         :item="item"
         @edit="$emit('edit', item)"
         @delete="$emit('delete', item)"
-        @upload-invoice="$emit('upload-invoice', item)"
-        @delete-invoice="(invoice) => $emit('delete-invoice', invoice)"
+        @delete-invoice-box="(invoiceBox) => $emit('delete-invoice-box', invoiceBox)"
+        @view-invoice-box="(invoiceBox) => $emit('view-invoice-box', invoiceBox)"
+        @link-invoice-box="$emit('link-invoice-box', item)"
       />
     </div>
   </div>
@@ -48,7 +49,8 @@ defineEmits<{
   add: []
   edit: [item: ExpenseItem]
   delete: [item: ExpenseItem]
-  'upload-invoice': [item: ExpenseItem]
-  'delete-invoice': [item: ExpenseItem]
+  'delete-invoice-box': [invoiceBox: any]
+  'view-invoice-box': [invoiceBox: any]
+  'link-invoice-box': [item: ExpenseItem]
 }>()
 </script>

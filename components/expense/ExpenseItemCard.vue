@@ -8,7 +8,12 @@
             <span class="px-2 py-1 text-xs font-medium rounded bg-primary-100 text-primary-800">
               {{ item.category }}
             </span>
-            <ExpenseInvoiceStatusBadge :status="invoiceStatus" :count="item.invoices?.length || 0" />
+            <ExpenseInvoiceStatusBadge
+              :status="invoiceStatus"
+              :count="item.invoiceBoxes?.length || 0"
+              :expense-amount="item.amount"
+              :total-invoice-amount="totalInvoiceAmount"
+            />
           </div>
           <p class="mt-2 text-lg font-semibold text-gray-900">
             {{ formatCurrency(item.amount) }}
@@ -49,44 +54,49 @@
         {{ item.description }}
       </p>
 
-      <!-- Invoices List -->
-      <div v-if="item.invoices && item.invoices.length > 0" class="pt-3 border-t border-gray-100">
+      <!-- InvoiceBoxes List -->
+      <div v-if="item.invoiceBoxes && item.invoiceBoxes.length > 0" class="pt-3 border-t border-gray-100">
         <div class="space-y-2">
-          <div v-for="invoice in item.invoices" :key="invoice.id"
+          <div v-for="invoiceBox in item.invoiceBoxes" :key="invoiceBox.id"
                class="flex items-center justify-between text-sm">
-            <a :href="invoice.filePath" target="_blank"
-               class="text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button type="button"
+                    @click="$emit('view-invoice-box', invoiceBox)"
+                    class="text-primary-600 hover:text-primary-700 flex items-center gap-1 text-left flex-1 min-w-0">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z" />
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              {{ invoice.description || invoice.fileName }} - {{ formatCurrency(invoice.amount) }}
-            </a>
-            <button type="button" class="text-sm text-red-600 hover:text-red-700"
-                    @click="$emit('delete-invoice', invoice)">
-              删除
+              <span class="truncate">{{ invoiceBox.invoiceNumber }} - {{ invoiceBox.invoiceType }} - {{ formatCurrency(invoiceBox.totalAmount) }}</span>
+            </button>
+            <button type="button" class="text-sm text-red-600 hover:text-red-700 ml-2 flex-shrink-0"
+                    @click="$emit('delete-invoice-box', invoiceBox)">
+              移除
             </button>
           </div>
         </div>
-        <button type="button"
-                class="mt-2 text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-                @click="$emit('upload-invoice')">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 4v16m8-8H4" />
-          </svg>
-          添加发票
-        </button>
+        <div class="mt-2">
+          <button type="button"
+                  class="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                  @click="$emit('link-invoice-box')">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            从发票箱选择
+          </button>
+        </div>
       </div>
       <div v-else class="pt-3 border-t border-gray-100">
         <button type="button"
                 class="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-                @click="$emit('upload-invoice')">
+                @click="$emit('link-invoice-box')">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
-          上传发票
+          从发票箱选择
         </button>
       </div>
     </div>
@@ -105,15 +115,20 @@ const props = defineProps<{
 defineEmits<{
   edit: []
   delete: []
-  'upload-invoice': []
-  'delete-invoice': [invoice: any]
+  'delete-invoice-box': [invoiceBox: any]
+  'view-invoice-box': [invoiceBox: any]
+  'link-invoice-box': []
 }>()
 
 const totalInvoiceAmount = computed(() => {
-  return props.item.invoices?.reduce((sum, inv) => sum + inv.amount, 0) || 0
+  return props.item.invoiceBoxes?.reduce((sum, inv) => sum + inv.totalAmount, 0) || 0
 })
 
 const invoiceStatus = computed(() => {
-  return calculateInvoiceStatus(props.item.amount, props.item.invoices || [], props.item.hasInvoice)
+  // 将 InvoiceBox 转换为 Invoice 格式以兼容 calculateInvoiceStatus
+  const invoices = props.item.invoiceBoxes?.map(ib => ({
+    amount: ib.totalAmount
+  })) || []
+  return calculateInvoiceStatus(props.item.amount, invoices, props.item.hasInvoice)
 })
 </script>

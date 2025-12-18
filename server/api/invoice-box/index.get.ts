@@ -11,6 +11,24 @@ export default defineEventHandler(async (event) => {
       where,
       orderBy: {
         invoiceDate: 'desc'
+      },
+      include: {
+        expenseItem: {
+          select: {
+            id: true,
+            description: true,
+            amount: true,
+            date: true,
+            category: true,
+            reimbursement: {
+              select: {
+                id: true,
+                title: true,
+                status: true
+              }
+            }
+          }
+        }
       }
     })
 

@@ -5,7 +5,7 @@ export type ExpenseCategory =
   | '办公'
   | '其他'
 
-import type { Invoice } from './invoice'
+import type { InvoiceBox } from './invoiceBox'
 
 export interface ExpenseItem {
   id: string
@@ -15,7 +15,7 @@ export interface ExpenseItem {
   description?: string | null
   category: ExpenseCategory
   hasInvoice: boolean
-  invoices?: Invoice[]
+  invoiceBoxes?: InvoiceBox[]
   createdAt: Date | string
   updatedAt: Date | string
 }

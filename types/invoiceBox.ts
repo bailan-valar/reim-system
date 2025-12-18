@@ -15,12 +15,28 @@ export interface InvoiceBox {
   taxRate?: number | null
   taxAmount?: number | null
   invoiceDate: Date | string
+  buyerName?: string | null
+  remark?: string | null
+  tags?: string | null
   fileName: string
   filePath: string
   status: InvoiceBoxStatus
   usedInItemId?: string | null
   createdAt: Date | string
   updatedAt: Date | string
+  // 关联的费用项目信息
+  expenseItem?: {
+    id: string
+    description: string | null
+    amount: number
+    date: Date | string
+    category: string
+    reimbursement: {
+      id: string
+      title: string
+      status: string
+    }
+  } | null
 }
 
 export interface CreateInvoiceBoxInput {
@@ -30,6 +46,9 @@ export interface CreateInvoiceBoxInput {
   taxRate?: number
   taxAmount?: number
   invoiceDate: Date | string
+  buyerName?: string
+  remark?: string
+  tags?: string
   fileName: string
   filePath: string
 }
@@ -41,6 +60,9 @@ export interface UpdateInvoiceBoxInput {
   taxRate?: number
   taxAmount?: number
   invoiceDate?: Date | string
+  buyerName?: string
+  remark?: string
+  tags?: string
   status?: InvoiceBoxStatus
   usedInItemId?: string
 }

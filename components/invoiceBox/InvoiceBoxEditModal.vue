@@ -104,6 +104,42 @@
             </div>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              购买方名称
+            </label>
+            <input
+              v-model="form.buyerName"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="请输入购买方名称"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              备注
+            </label>
+            <textarea
+              v-model="form.remark"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="请输入备注信息（如火车票行程、其他说明等）"
+            ></textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              标签
+            </label>
+            <input
+              v-model="form.tags"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="请输入标签，多个标签用逗号分隔（如：差旅,北京,项目A）"
+            />
+          </div>
+
           <!-- Error message -->
           <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded-lg">
             <p class="text-red-800 text-sm">{{ error }}</p>
@@ -155,7 +191,10 @@ const form = ref({
   totalAmount: props.invoice.totalAmount,
   taxRate: props.invoice.taxRate,
   taxAmount: props.invoice.taxAmount,
-  invoiceDate: new Date(props.invoice.invoiceDate).toISOString().split('T')[0]
+  invoiceDate: new Date(props.invoice.invoiceDate).toISOString().split('T')[0],
+  buyerName: props.invoice.buyerName || '',
+  remark: props.invoice.remark || '',
+  tags: props.invoice.tags || ''
 })
 
 async function handleSubmit() {
@@ -171,7 +210,10 @@ async function handleSubmit() {
         totalAmount: form.value.totalAmount,
         taxRate: form.value.taxRate,
         taxAmount: form.value.taxAmount,
-        invoiceDate: form.value.invoiceDate
+        invoiceDate: form.value.invoiceDate,
+        buyerName: form.value.buyerName,
+        remark: form.value.remark,
+        tags: form.value.tags
       }
     })
 

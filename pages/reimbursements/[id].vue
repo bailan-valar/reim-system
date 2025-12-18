@@ -10,8 +10,8 @@
           <div class="flex items-center justify-between">
             <h1 class="text-3xl font-bold text-gray-900">报销单详情</h1>
             <div class="flex gap-3">
-              <UiButton @click="showBulkUploadModal = true">
-                上传发票
+              <UiButton variant="secondary" @click="handlePrint">
+                打印
               </UiButton>
               <UiButton variant="secondary" @click="showEditModal = true">
                 编辑
@@ -100,8 +100,9 @@
           @add="showAddItemModal = true"
           @edit="handleEditItem"
           @delete="handleDeleteItem"
-          @upload-invoice="handleUploadInvoice"
-          @delete-invoice="handleDeleteInvoice"
+          @delete-invoice-box="handleDeleteInvoiceBox"
+          @view-invoice-box="handleViewInvoiceBox"
+          @link-invoice-box="handleLinkInvoiceBox"
         />
       </div>
 
@@ -131,31 +132,36 @@
       />
     </UiModal>
 
-    <!-- Upload Invoice Modal -->
-    <UiModal v-model="showUploadModal" title="上传发票">
-      <ExpenseInvoiceUpload
-        v-if="uploadingItem"
-        :item-id="uploadingItem.id"
-        :reimbursement-id="id"
-        @success="handleUploadSuccess"
-        @cancel="showUploadModal = false"
+    <!-- Invoice Box Selector Modal -->
+    <ClientOnly>
+      <InvoiceBoxSelector
+        v-if="showInvoiceBoxSelector"
+        :expense-amount="linkingItem?.amount"
+        @close="showInvoiceBoxSelector = false"
+        @select="handleInvoiceBoxSelected"
       />
-    </UiModal>
+    </ClientOnly>
 
-    <!-- Bulk Upload Invoice Modal -->
-    <UiModal v-model="showBulkUploadModal" title="批量上传发票">
-      <ExpenseBulkInvoiceUpload
-        :reimbursement-id="id"
-        @success="handleBulkUploadSuccess"
-        @cancel="showBulkUploadModal = false"
-      />
-    </UiModal>
+    <!-- InvoiceBox View Modal -->
+    <InvoiceBoxViewModal
+      v-if="showInvoiceBoxViewModal && viewingInvoiceBox"
+      :invoice="viewingInvoiceBox"
+      @close="closeInvoiceBoxViewModal"
+    />
+
+    <!-- Print Preview Modal -->
+    <ReimbursementPrintPreviewModal
+      v-if="reimbursement"
+      v-model="showPrintPreview"
+      :reimbursement="reimbursement"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Reimbursement, UpdateReimbursementInput } from '~/types/reimbursement'
 import type { ExpenseItem, CreateExpenseItemInput } from '~/types/expenseItem'
+import type { InvoiceBox } from '~/types/invoiceBox'
 import { formatCurrency, formatDateTime, formatDate } from '~/utils/formatters'
 
 const route = useRoute()
@@ -163,7 +169,7 @@ const id = route.params.id as string
 
 const { fetchReimbursement, updateReimbursement, deleteReimbursement } = useReimbursements()
 const { createExpenseItem, updateExpenseItem, deleteExpenseItem } = useExpenseItems()
-const { deleteInvoice: deleteInvoiceApi } = useInvoices()
+const { linkInvoiceBox, unlinkInvoiceBox } = useInvoices()
 
 const loading = ref(true)
 const updating = ref(false)
@@ -172,19 +178,21 @@ const reimbursement = ref<Reimbursement | null>(null)
 
 const showEditModal = ref(false)
 const showAddItemModal = ref(false)
-const showUploadModal = ref(false)
-const showBulkUploadModal = ref(false)
+const showInvoiceBoxSelector = ref(false)
+const showInvoiceBoxViewModal = ref(false)
+const showPrintPreview = ref(false)
 const editingItem = ref<ExpenseItem | null>(null)
-const uploadingItem = ref<ExpenseItem | null>(null)
+const linkingItem = ref<ExpenseItem | null>(null)
+const viewingInvoiceBox = ref<InvoiceBox | null>(null)
 
 const invoiceStats = computed(() => {
   const items = reimbursement.value?.items || []
   const totalItems = items.length
   const itemsWithInvoices = items.filter(item =>
-    item.invoices && item.invoices.length > 0
+    item.invoiceBoxes && item.invoiceBoxes.length > 0
   ).length
   const totalInvoices = items.reduce((sum, item) =>
-    sum + (item.invoices?.length || 0), 0
+    sum + (item.invoiceBoxes?.length || 0), 0
   )
 
   return {
@@ -218,6 +226,10 @@ const handleUpdate = async (data: UpdateReimbursementInput) => {
   } finally {
     updating.value = false
   }
+}
+
+const handlePrint = () => {
+  showPrintPreview.value = true
 }
 
 const handleDelete = async () => {
@@ -264,38 +276,50 @@ const handleDeleteItem = async (item: ExpenseItem) => {
   }
 }
 
-const handleUploadInvoice = (item: ExpenseItem) => {
-  uploadingItem.value = item
-  showUploadModal.value = true
-}
-
-const handleUploadSuccess = async () => {
-  showUploadModal.value = false
-  uploadingItem.value = null
-  await loadReimbursement()
-}
-
-const handleBulkUploadSuccess = async () => {
-  showBulkUploadModal.value = false
-  await loadReimbursement()
-}
-
-const handleDeleteInvoice = async (invoice: any) => {
-  if (!confirm('确定要删除此发票吗？')) return
+const handleDeleteInvoiceBox = async (invoiceBox: InvoiceBox) => {
+  if (!confirm('确定要移除此发票的关联吗？发票本身不会被删除。')) return
 
   try {
     // 找到包含此发票的费用项目
     const item = reimbursement.value?.items?.find(i =>
-      i.invoices?.some(inv => inv.id === invoice.id)
+      i.invoiceBoxes?.some(ib => ib.id === invoiceBox.id)
     )
 
     if (item) {
-      await deleteInvoiceApi(id, item.id, invoice.id)
+      await unlinkInvoiceBox(id, item.id, invoiceBox.id)
       await loadReimbursement()
     }
   } catch (error: any) {
-    alert(error.message || '删除发票失败')
+    alert(error.message || '移除发票关联失败')
   }
+}
+
+const handleLinkInvoiceBox = (item: ExpenseItem) => {
+  linkingItem.value = item
+  showInvoiceBoxSelector.value = true
+}
+
+const handleInvoiceBoxSelected = async (invoiceBox: InvoiceBox) => {
+  if (!linkingItem.value) return
+
+  try {
+    await linkInvoiceBox(id, linkingItem.value.id, invoiceBox.id)
+    showInvoiceBoxSelector.value = false
+    linkingItem.value = null
+    await loadReimbursement()
+  } catch (error: any) {
+    alert(error.message || '关联发票失败')
+  }
+}
+
+const handleViewInvoiceBox = (invoiceBox: InvoiceBox) => {
+  viewingInvoiceBox.value = invoiceBox
+  showInvoiceBoxViewModal.value = true
+}
+
+const closeInvoiceBoxViewModal = () => {
+  showInvoiceBoxViewModal.value = false
+  viewingInvoiceBox.value = null
 }
 
 const closeItemModal = () => {

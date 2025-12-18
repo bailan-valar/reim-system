@@ -15,9 +15,6 @@ export default defineEventHandler(async (event) => {
       where: { id },
       include: {
         items: {
-          include: {
-            invoices: true
-          },
           orderBy: {
             date: 'desc'
           }
@@ -33,8 +30,22 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // 为每个 item 查询关联的 InvoiceBox
+    const itemsWithInvoiceBoxes = await Promise.all(
+      reimbursement.items.map(async (item) => {
+        const invoiceBoxes = await prisma.invoiceBox.findMany({
+          where: { usedInItemId: item.id },
+          orderBy: { createdAt: 'desc' }
+        })
+        return { ...item, invoiceBoxes }
+      })
+    )
+
     return {
-      data: reimbursement
+      data: {
+        ...reimbursement,
+        items: itemsWithInvoiceBoxes
+      }
     }
   } catch (error: any) {
     throw createError({

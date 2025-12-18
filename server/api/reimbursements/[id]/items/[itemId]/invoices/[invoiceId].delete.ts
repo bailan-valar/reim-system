@@ -1,5 +1,4 @@
 import prisma from '~/server/utils/prisma'
-import { deleteFile, extractFileNameFromPath } from '~/server/utils/fileUpload'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -43,22 +42,38 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 删除文件
-    try {
-      const fileName = extractFileNameFromPath(invoice.filePath)
-      await deleteFile(fileName)
-    } catch (error) {
-      console.error('[DELETE-INVOICE] Error deleting file:', error)
-      // 继续删除数据库记录，即使文件删除失败
-    }
-
-    // 删除数据库记录
+    // 删除发票记录（只删除关联关系）
     await prisma.invoice.delete({
       where: { id: invoiceId }
     })
 
+    // 如果该发票来自发票箱，恢复发票箱状态
+    if (invoice.invoiceBoxId) {
+      await prisma.invoiceBox.update({
+        where: { id: invoice.invoiceBoxId },
+        data: {
+          status: '未使用',
+          usedInItemId: null
+        }
+      })
+    }
+
+    // 检查费用项目是否还有其他发票
+    const remainingInvoices = await prisma.invoice.findMany({
+      where: { expenseItemId: itemId }
+    })
+
+    // 如果没有其他发票，更新hasInvoice标记
+    if (remainingInvoices.length === 0) {
+      await prisma.expenseItem.update({
+        where: { id: itemId },
+        data: { hasInvoice: false }
+      })
+    }
+
     return {
-      success: true
+      success: true,
+      message: '删除发票关联成功'
     }
   } catch (error: any) {
     throw createError({

@@ -1,109 +1,55 @@
-import type { Invoice } from '~/types/invoice'
-import type { ApiResponse, BulkInvoiceUploadResponse } from '~/types/api'
+import type { InvoiceBox } from '~/types/invoiceBox'
+import type { ApiResponse } from '~/types/api'
 
 export const useInvoices = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // 上传单张发票
-  const uploadInvoice = async (
+  // 从发票箱关联发票
+  const linkInvoiceBox = async (
     reimbursementId: string,
     itemId: string,
-    file: File
+    invoiceBoxId: string
   ) => {
     loading.value = true
     error.value = null
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const { data } = await $fetch<ApiResponse<Invoice>>(
-        `/api/reimbursements/${reimbursementId}/items/${itemId}/invoices/upload`,
+      const { data } = await $fetch<ApiResponse<InvoiceBox>>(
+        `/api/reimbursements/${reimbursementId}/items/${itemId}/link-invoice-box`,
         {
           method: 'POST',
-          body: formData
+          body: { invoiceBoxId }
         }
       )
       return data
     } catch (e: any) {
-      error.value = e.message || '上传发票失败'
+      error.value = e.message || '关联发票失败'
       throw e
     } finally {
       loading.value = false
     }
   }
 
-  // 批量上传发票
-  const uploadInvoices = async (
+  // 取消关联发票箱
+  const unlinkInvoiceBox = async (
     reimbursementId: string,
     itemId: string,
-    files: File[]
-  ) => {
-    loading.value = true
-    error.value = null
-
-    try {
-      const formData = new FormData()
-      files.forEach(file => {
-        formData.append('files', file)
-      })
-
-      const { data } = await $fetch<ApiResponse<BulkInvoiceUploadResponse>>(
-        `/api/reimbursements/${reimbursementId}/items/${itemId}/invoices/bulk-upload`,
-        {
-          method: 'POST',
-          body: formData
-        }
-      )
-      return data
-    } catch (e: any) {
-      error.value = e.message || '批量上传发票失败'
-      throw e
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // 删除发票
-  const deleteInvoice = async (
-    reimbursementId: string,
-    itemId: string,
-    invoiceId: string
+    invoiceBoxId: string
   ) => {
     loading.value = true
     error.value = null
 
     try {
       await $fetch(
-        `/api/reimbursements/${reimbursementId}/items/${itemId}/invoices/${invoiceId}`,
+        `/api/reimbursements/${reimbursementId}/items/${itemId}/unlink-invoice-box`,
         {
-          method: 'DELETE'
+          method: 'POST',
+          body: { invoiceBoxId }
         }
       )
     } catch (e: any) {
-      error.value = e.message || '删除发票失败'
-      throw e
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // 获取费用项目的所有发票
-  const fetchInvoices = async (
-    reimbursementId: string,
-    itemId: string
-  ) => {
-    loading.value = true
-    error.value = null
-
-    try {
-      const { data } = await $fetch<ApiResponse<Invoice[]>>(
-        `/api/reimbursements/${reimbursementId}/items/${itemId}/invoices`
-      )
-      return data
-    } catch (e: any) {
-      error.value = e.message || '获取发票列表失败'
+      error.value = e.message || '取消关联失败'
       throw e
     } finally {
       loading.value = false
@@ -113,9 +59,7 @@ export const useInvoices = () => {
   return {
     loading: readonly(loading),
     error: readonly(error),
-    uploadInvoice,
-    uploadInvoices,
-    deleteInvoice,
-    fetchInvoices
+    linkInvoiceBox,
+    unlinkInvoiceBox
   }
 }

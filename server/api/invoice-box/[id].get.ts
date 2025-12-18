@@ -12,7 +12,25 @@ export default defineEventHandler(async (event) => {
     }
 
     const invoice = await prisma.invoiceBox.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        expenseItem: {
+          select: {
+            id: true,
+            description: true,
+            amount: true,
+            date: true,
+            category: true,
+            reimbursement: {
+              select: {
+                id: true,
+                title: true,
+                status: true
+              }
+            }
+          }
+        }
+      }
     })
 
     if (!invoice) {
