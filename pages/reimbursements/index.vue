@@ -12,6 +12,12 @@
           </div>
           <div class="flex gap-3">
             <UiButton
+              variant="outline"
+              @click="navigateTo('/invoice-box')"
+            >
+              发票收集箱
+            </UiButton>
+            <UiButton
               variant="secondary"
               @click="showCreateFromInvoicesModal = true"
             >
@@ -57,11 +63,12 @@ const handleCreateSuccess = (reimbursementId: string) => {
   navigateTo(`/reimbursements/${reimbursementId}`)
 }
 
-const loadReimbursements = async (status?: string, sortBy?: string, order?: string) => {
+const loadReimbursements = async (status?: string, companyId?: string, sortBy?: string, order?: string) => {
   loading.value = true
   try {
     const data = await fetchReimbursements({
       status: status || undefined,
+      companyId: companyId || undefined,
       sortBy: (sortBy as any) || 'createdAt',
       order: (order as any) || 'desc'
     })
@@ -73,11 +80,16 @@ const loadReimbursements = async (status?: string, sortBy?: string, order?: stri
   }
 }
 
-const handleFilter = (status: string, sortBy: string, order: string) => {
-  loadReimbursements(status, sortBy, order)
+const handleFilter = (status: string, companyId: string, sortBy: string, order: string) => {
+  loadReimbursements(status, companyId, sortBy, order)
 }
 
 onMounted(() => {
+  loadReimbursements()
+})
+
+// 当页面从 keepalive 缓存中激活时重新加载数据
+onActivated(() => {
   loadReimbursements()
 })
 </script>

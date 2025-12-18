@@ -35,7 +35,7 @@
           支持批量上传多个PDF或OFD发票文件 (每个最大 10MB)
         </p>
         <p class="mt-1 text-xs text-gray-500">
-          系统将自动识别发票信息并创建费用项目
+          系统将使用阿里云智能识别发票信息，识别失败的项目需要手动填写
         </p>
       </div>
 
@@ -120,9 +120,14 @@
               <div
                 v-for="(result, index) in uploadResults.results"
                 :key="index"
-                class="text-xs text-green-800"
+                :class="result.needsManualInput ? 'text-xs text-orange-800' : 'text-xs text-green-800'"
               >
-                ✓ {{ result.fileName }}: {{ result.invoiceData.description }} - ¥{{ result.invoiceData.amount }}
+                <span v-if="result.needsManualInput">
+                  ⚠ {{ result.fileName }}: 已创建费用项目，请手动填写金额和日期
+                </span>
+                <span v-else>
+                  ✓ {{ result.fileName }}: {{ result.invoiceData.description }} - ¥{{ result.invoiceData.amount }}
+                </span>
               </div>
             </div>
           </div>

@@ -124,6 +124,7 @@
     <UiModal v-model="showAddItemModal" :title="editingItem ? '编辑费用项目' : '添加费用项目'">
       <ExpenseItemForm
         :item="editingItem"
+        :default-date="reimbursement?.startDate"
         :loading="itemLoading"
         @submit="handleSaveItem"
         @cancel="closeItemModal"

@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, 'id')
     const body = await readBody(event)
-    const { amount, date, description, category } = body
+    const { amount, date, description, category, hasInvoice } = body
 
     if (!id) {
       throw createError({
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
         date: new Date(date),
         description: description || null,
         category,
-        hasInvoice: false
+        hasInvoice: hasInvoice || false
       }
     })
 

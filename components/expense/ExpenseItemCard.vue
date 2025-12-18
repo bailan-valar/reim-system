@@ -114,6 +114,6 @@ const totalInvoiceAmount = computed(() => {
 })
 
 const invoiceStatus = computed(() => {
-  return calculateInvoiceStatus(props.item.amount, props.item.invoices || [])
+  return calculateInvoiceStatus(props.item.amount, props.item.invoices || [], props.item.hasInvoice)
 })
 </script>

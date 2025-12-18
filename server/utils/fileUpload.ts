@@ -2,7 +2,7 @@ import { writeFile, unlink, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '~/utils/constants'
-import { parseInvoice, type InvoiceData } from './invoiceParser'
+import { recognizeMixedInvoice, type InvoiceData } from './aliyunOcr'
 
 export interface UploadedFile {
   fileName: string
@@ -51,24 +51,24 @@ export async function saveFile(file: File, itemId: string): Promise<UploadedFile
   await writeFile(filePath, buffer)
   console.log(`[FILE-UPLOAD] File saved to: ${filePath}`)
 
-  // Parse invoice data
+  // Recognize invoice data using Aliyun OCR
   let invoiceData: InvoiceData | null = null
   try {
-    console.log(`[FILE-UPLOAD] Starting invoice parsing...`)
-    invoiceData = await parseInvoice(buffer, file.type)
+    console.log(`[FILE-UPLOAD] Starting invoice recognition using Aliyun OCR...`)
+    invoiceData = await recognizeMixedInvoice(buffer, file.type)
 
     if (invoiceData) {
-      console.log(`[FILE-UPLOAD] ✓ Invoice parsing successful:`)
+      console.log(`[FILE-UPLOAD] ✓ Invoice recognition successful:`)
       console.log(`[FILE-UPLOAD]   - Amount: ${invoiceData.amount}`)
       console.log(`[FILE-UPLOAD]   - Date: ${invoiceData.date.toISOString().split('T')[0]}`)
       console.log(`[FILE-UPLOAD]   - Category: ${invoiceData.category}`)
       console.log(`[FILE-UPLOAD]   - Description: ${invoiceData.description}`)
     } else {
-      console.warn(`[FILE-UPLOAD] ⚠ Invoice parsing returned null - could not recognize invoice format`)
+      console.warn(`[FILE-UPLOAD] ⚠ Invoice recognition failed - user will need to fill in data manually`)
     }
   } catch (error) {
-    console.error(`[FILE-UPLOAD] ✗ Invoice parsing failed:`, error)
-    // Don't throw error - allow file upload to succeed even if parsing fails
+    console.error(`[FILE-UPLOAD] ✗ Invoice recognition error:`, error)
+    // Don't throw error - allow file upload to succeed even if recognition fails
   }
 
   return {

@@ -43,7 +43,12 @@
       "Bash(\"C:\\Program Files\\PostgreSQL\\18\\bin\\psql\" -h 1.15.32.178 -p 5432 -U postgres -d yimu_bill -c \"SELECT name, COUNT(*) as count, COUNT(DISTINCT user_id) as user_count FROM scenes GROUP BY name HAVING COUNT(*) > 1 ORDER BY count DESC;\")",
       "Bash(test:*)",
       "Bash(git mv:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npm info:*)",
+      "Bash(node test-pdf-to-img.mjs:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

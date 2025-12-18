@@ -28,6 +28,10 @@
 <script setup lang="ts">
 import type { CreateReimbursementInput } from '~/types/reimbursement'
 
+definePageMeta({
+  keepalive: false
+})
+
 const { createReimbursement } = useReimbursements()
 const loading = ref(false)
 

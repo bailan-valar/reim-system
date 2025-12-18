@@ -34,6 +34,9 @@
         <p class="mt-1 text-xs text-gray-500">
           支持 PDF, PNG, JPG, JPEG, OFD (最大 10MB)，可选择多个文件
         </p>
+        <p class="mt-1 text-xs text-gray-500">
+          系统将使用阿里云智能识别发票信息
+        </p>
       </div>
 
       <div v-else class="space-y-3">

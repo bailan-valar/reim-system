@@ -27,6 +27,18 @@
     />
 
     <div>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          v-model="formData.hasInvoice"
+          type="checkbox"
+          class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+        />
+        <span class="text-sm font-medium text-gray-700">已开票</span>
+      </label>
+      <p class="mt-1 text-xs text-gray-500">勾选此项表示该费用已开具发票，但尚未上传</p>
+    </div>
+
+    <div>
       <label class="label">描述</label>
       <textarea
         v-model="formData.description"
@@ -61,6 +73,7 @@ import { EXPENSE_CATEGORIES } from '~/utils/constants'
 const props = defineProps<{
   item?: ExpenseItem
   loading?: boolean
+  defaultDate?: string
 }>()
 
 const emit = defineEmits<{
@@ -68,11 +81,22 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
+const getDefaultDate = () => {
+  if (props.item?.date) {
+    return new Date(props.item.date).toISOString().split('T')[0]
+  }
+  if (props.defaultDate) {
+    return new Date(props.defaultDate).toISOString().split('T')[0]
+  }
+  return new Date().toISOString().split('T')[0]
+}
+
 const formData = reactive({
   amount: props.item?.amount?.toString() || '',
-  date: props.item?.date ? new Date(props.item.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+  date: getDefaultDate(),
   category: props.item?.category || '',
-  description: props.item?.description || ''
+  description: props.item?.description || '',
+  hasInvoice: props.item?.hasInvoice || false
 })
 
 const errors = reactive({
@@ -112,7 +136,8 @@ const handleSubmit = () => {
     amount: parseFloat(formData.amount),
     date: formData.date,
     category: formData.category as any,
-    description: formData.description.trim() || undefined
+    description: formData.description.trim() || undefined,
+    hasInvoice: formData.hasInvoice
   })
 }
 </script>

@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     const id = getRouterParam(event, 'id')
     const itemId = getRouterParam(event, 'itemId')
     const body = await readBody(event)
-    const { amount, date, description, category } = body
+    const { amount, date, description, category, hasInvoice } = body
 
     if (!id || !itemId) {
       throw createError({
@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
     if (date !== undefined) updateData.date = new Date(date)
     if (description !== undefined) updateData.description = description
     if (category !== undefined) updateData.category = category
+    if (hasInvoice !== undefined) updateData.hasInvoice = hasInvoice
 
     // Update expense item
     const item = await prisma.expenseItem.update({

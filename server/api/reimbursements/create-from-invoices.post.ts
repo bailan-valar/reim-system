@@ -1,6 +1,6 @@
 import prisma from '~/server/utils/prisma'
 import { saveFile } from '~/server/utils/fileUpload'
-import { parseInvoice } from '~/server/utils/invoiceParser'
+import { recognizeMixedInvoice } from '~/server/utils/aliyunOcr'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -81,8 +81,8 @@ export default defineEventHandler(async (event) => {
             continue
           }
 
-          // Parse invoice data using unified parser
-          const invoiceData = await parseInvoice(Buffer.from(part.data), part.type || 'application/pdf')
+          // Parse invoice data using Aliyun OCR
+          const invoiceData = await recognizeMixedInvoice(Buffer.from(part.data), part.type || 'application/pdf')
 
           if (!invoiceData) {
             console.warn(`[CREATE-FROM-INVOICES] ✗ File processing failed: ${part.filename} - unable to recognize invoice information`)

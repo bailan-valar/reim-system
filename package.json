@@ -11,16 +11,14 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@alicloud/ocr20191230": "^4.0.1",
-    "@alicloud/openapi-client": "^0.4.15",
     "@prisma/client": "^5.22.0",
-    "jszip": "^3.10.1",
+    "imap": "^0.8.19",
+    "mailparser": "^3.9.1",
     "nuxt": "^3.14.0",
-    "ofd.js": "^1.5.0",
-    "pdfjs-dist": "^5.4.394",
+    "pdf-to-img": "^5.0.0",
+    "tencentcloud-sdk-nodejs-ocr": "^4.1.155",
     "vue": "^3.5.0",
-    "vue-router": "^4.5.0",
-    "xml2js": "^0.6.2"
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.12.0",

@@ -14,5 +14,29 @@
     ],
     "deny": []
   },
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \"d:\\Workspace\\canger\\reim-system\\.claude\\modal-notification.ps1\" -Title \"Claude Code\" -Message \"等待权限确认\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \"d:\\Workspace\\canger\\reim-system\\.claude\\modal-notification.ps1\" -Title \"Claude Code\" -Message \"当前任务已完成\""
+          }
+        ]
+      }
+    ]
+  },
   "apiKeyHelper": "echo 'sk-ant-oat01-sr42w4dr4v78gF2EpUY1bdfwHUvpyD2IqgZYMH4JDtgYIgGk5F3MTBbs7P7Gu3ryU8UXYYRhFaLMNTUfi67sHgTvlgyesAA'"
 }

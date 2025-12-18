@@ -14,6 +14,7 @@ export interface ExpenseItem {
   date: Date | string
   description?: string | null
   category: ExpenseCategory
+  hasInvoice: boolean
   invoices?: Invoice[]
   createdAt: Date | string
   updatedAt: Date | string
@@ -24,6 +25,7 @@ export interface CreateExpenseItemInput {
   date: Date | string
   description?: string
   category: ExpenseCategory
+  hasInvoice?: boolean
 }
 
 export interface UpdateExpenseItemInput {
@@ -31,4 +33,5 @@ export interface UpdateExpenseItemInput {
   date?: Date | string
   description?: string
   category?: ExpenseCategory
+  hasInvoice?: boolean
 }

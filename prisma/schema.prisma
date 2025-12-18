@@ -46,6 +46,7 @@ model ExpenseItem {
   date            DateTime
   description     String?
   category        String    // 交通, 餐饮, 住宿, 办公, 其他
+  hasInvoice      Boolean   @default(false) // 是否已开票
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -72,4 +73,24 @@ model Invoice {
 
   @@map("invoices")
   @@index([expenseItemId])
+}
+
+model InvoiceBox {
+  id              String    @id @default(uuid())
+  invoiceNumber   String    @unique // 发票号码
+  invoiceType     String    // 开票类型（增值税专用发票、增值税普通发票、电子发票等）
+  totalAmount     Float     // 票面总额
+  taxRate         Float?    // 税率（百分比，如13表示13%）
+  taxAmount       Float?    // 票面税额
+  invoiceDate     DateTime  // 开票日期
+  fileName        String    // 附件文件名
+  filePath        String    // 附件路径
+  status          String    @default("未使用") // 状态：未使用、已使用
+  usedInItemId    String?   // 如果已使用，关联的费用项目ID
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("invoice_box")
+  @@index([status])
+  @@index([invoiceDate])
 }

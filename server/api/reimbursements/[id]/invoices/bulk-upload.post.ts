@@ -1,6 +1,6 @@
 import prisma from '~/server/utils/prisma'
 import { saveFile } from '~/server/utils/fileUpload'
-import { parseInvoice } from '~/server/utils/invoiceParser'
+import { recognizeMixedInvoice } from '~/server/utils/aliyunOcr'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -75,38 +75,49 @@ export default defineEventHandler(async (event) => {
             fileType = 'application/pdf'
             console.log(`[BULK-UPLOAD] Detected PDF file, setting type to: ${fileType}`)
           }
-          console.log(`[BULK-UPLOAD] File type for parsing: ${fileType}`)
+          console.log(`[BULK-UPLOAD] File type for recognition: ${fileType}`)
 
-          // Parse invoice data using unified parser
-          const invoiceData = await parseInvoice(Buffer.from(part.data), fileType)
+          // Recognize invoice data using Aliyun OCR
+          const invoiceData = await recognizeMixedInvoice(Buffer.from(part.data), fileType)
+
+          let expenseItem
+          let needsManualInput = false
 
           if (!invoiceData) {
-            console.warn(`[BULK-UPLOAD] ✗ File processing failed: ${part.filename} - unable to recognize invoice information`)
-            errors.push({
-              fileName: part.filename,
-              error: '无法识别发票信息'
+            console.warn(`[BULK-UPLOAD] ⚠ Invoice recognition failed: ${part.filename} - creating expense item with default values`)
+
+            // Create expense item with default values when recognition fails
+            expenseItem = await prisma.expenseItem.create({
+              data: {
+                reimbursementId,
+                amount: 0,
+                date: new Date(),
+                description: part.filename,
+                category: '其他'
+              }
             })
-            continue
-          }
 
-          console.log(`[BULK-UPLOAD] Invoice data parsed successfully:`, JSON.stringify({
-            amount: invoiceData.amount,
-            date: invoiceData.date.toISOString().split('T')[0],
-            description: invoiceData.description,
-            category: invoiceData.category
-          }))
-
-          // Create expense item
-          const expenseItem = await prisma.expenseItem.create({
-            data: {
-              reimbursementId,
+            needsManualInput = true
+            console.log(`[BULK-UPLOAD] Created expense item with default values: ${expenseItem.id}`)
+          } else {
+            console.log(`[BULK-UPLOAD] Invoice data recognized successfully:`, JSON.stringify({
               amount: invoiceData.amount,
-              date: invoiceData.date,
+              date: invoiceData.date.toISOString().split('T')[0],
               description: invoiceData.description,
-              category: invoiceData.category,
-              hasInvoice: false // Will be updated after file save
-            }
-          })
+              category: invoiceData.category
+            }))
+
+            // Create expense item with recognized data
+            expenseItem = await prisma.expenseItem.create({
+              data: {
+                reimbursementId,
+                amount: invoiceData.amount,
+                date: invoiceData.date,
+                description: invoiceData.description,
+                category: invoiceData.category
+              }
+            })
+          }
 
           console.log(`[BULK-UPLOAD] Created expense item: ${expenseItem.id}`)
 
@@ -130,12 +141,13 @@ export default defineEventHandler(async (event) => {
           results.push({
             fileName: part.filename,
             expenseItem: updatedItem,
-            invoiceData: {
+            needsManualInput,
+            invoiceData: invoiceData ? {
               amount: invoiceData.amount,
               date: invoiceData.date,
               description: invoiceData.description,
               category: invoiceData.category
-            }
+            } : null
           })
         } catch (error: any) {
           console.error(`[BULK-UPLOAD] ✗ Error processing file ${part.filename}:`, error)

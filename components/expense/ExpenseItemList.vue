@@ -31,7 +31,7 @@
         @edit="$emit('edit', item)"
         @delete="$emit('delete', item)"
         @upload-invoice="$emit('upload-invoice', item)"
-        @delete-invoice="$emit('delete-invoice', item)"
+        @delete-invoice="(invoice) => $emit('delete-invoice', invoice)"
       />
     </div>
   </div>

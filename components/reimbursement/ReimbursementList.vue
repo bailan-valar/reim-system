@@ -9,6 +9,12 @@
         class="sm:w-48"
       />
       <UiSelect
+        v-model="selectedCompany"
+        :options="companyOptions"
+        placeholder="全部公司"
+        class="sm:w-48"
+      />
+      <UiSelect
         v-model="sortBy"
         :options="sortOptions"
         class="sm:w-48"
@@ -48,6 +54,7 @@
 
 <script setup lang="ts">
 import type { Reimbursement } from '~/types/reimbursement'
+import type { Company } from '~/types/company'
 import { REIMBURSEMENT_STATUSES } from '~/utils/constants'
 
 const props = defineProps<{
@@ -56,11 +63,15 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  filter: [status: string, sortBy: string, order: string]
+  filter: [status: string, companyId: string, sortBy: string, order: string]
 }>()
 
+const { fetchCompanies } = useCompanies()
+
 const selectedStatus = ref('')
+const selectedCompany = ref('')
 const sortBy = ref('createdAt-desc')
+const companies = ref<Company[]>([])
 
 const statusOptions = computed(() => [
   { value: '', label: '全部状态' },
@@ -70,16 +81,34 @@ const statusOptions = computed(() => [
   }))
 ])
 
+const companyOptions = computed(() => [
+  { value: '', label: '全部公司' },
+  ...companies.value.map(company => ({
+    value: company.id,
+    label: company.name
+  }))
+])
+
 const sortOptions = [
   { value: 'createdAt-desc', label: '创建时间 (新到旧)' },
   { value: 'createdAt-asc', label: '创建时间 (旧到新)' },
   { value: 'updatedAt-desc', label: '更新时间 (新到旧)' },
+  { value: 'startDate-desc', label: '费用日期 (新到旧)' },
+  { value: 'startDate-asc', label: '费用日期 (旧到新)' },
   { value: 'totalAmount-desc', label: '金额 (高到低)' },
   { value: 'totalAmount-asc', label: '金额 (低到高)' }
 ]
 
-watch([selectedStatus, sortBy], () => {
+watch([selectedStatus, selectedCompany, sortBy], () => {
   const [field, order] = sortBy.value.split('-')
-  emit('filter', selectedStatus.value, field, order)
+  emit('filter', selectedStatus.value, selectedCompany.value, field, order)
+})
+
+onMounted(async () => {
+  try {
+    companies.value = await fetchCompanies()
+  } catch (error) {
+    console.error('Failed to fetch companies:', error)
+  }
 })
 </script>
