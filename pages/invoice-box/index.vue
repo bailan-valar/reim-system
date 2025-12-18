@@ -296,6 +296,7 @@
       :invoice="selectedInvoice"
       @close="showViewModal = false"
       @unlinked="handleUnlinked"
+      @deleted="handleDeleted"
     />
   </div>
 </template>
@@ -461,6 +462,11 @@ function handleUpdated() {
 }
 
 function handleUnlinked() {
+  showViewModal.value = false
+  fetchInvoices()
+}
+
+function handleDeleted() {
   showViewModal.value = false
   fetchInvoices()
 }

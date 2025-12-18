@@ -169,6 +169,27 @@
           <input v-model="editableData.reimbursementDate" type="text"
             class="border-b border-gray-300 focus:border-primary-500 outline-none w-48" />
         </div>
+
+        <!-- 裁剪分割线 -->
+        <div class="cut-line-container mt-8">
+          <div class="cut-line">
+            <span class="cut-line-text">✂</span>
+            <div class="cut-line-dashed"></div>
+            <span class="cut-line-text">裁剪线</span>
+            <div class="cut-line-dashed"></div>
+            <span class="cut-line-text">✂</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 发票打印选项 -->
+      <div v-if="invoiceImages.length > 0" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input v-model="includePrintInvoices" type="checkbox" class="w-4 h-4 text-primary-600 rounded" />
+          <span class="text-sm font-medium text-gray-700">
+            同时打印发票（共 {{ invoiceImages.length }} 张）
+          </span>
+        </label>
       </div>
 
       <!-- 操作按钮 -->
@@ -227,6 +248,9 @@ const editableData = ref<EditableData>({
   reimbursementDate: formatDate(new Date())
 })
 
+// 是否打印发票
+const includePrintInvoices = ref(true)
+
 // 初始化明细项
 const initializeItems = () => {
   const items = props.reimbursement.items || []
@@ -236,12 +260,35 @@ const initializeItems = () => {
       month: String(date.getMonth() + 1),
       day: String(date.getDate()),
       description: item.description || getCategoryName(item.category),
-      invoiceCount: String(item.invoices?.length || 0),
+      invoiceCount: String(item.invoiceBoxes?.length || 0),
       amount: item.amount,
       amountDigits: getAmountDigits(item.amount)
     }
   })
 }
+
+// 获取所有发票文件
+const invoiceImages = computed(() => {
+  const items = props.reimbursement.items || []
+  const images: Array<{ url: string; itemId: string; invoiceId: string; fileName: string; isPdf: boolean }> = []
+
+  items.forEach(item => {
+    if (item.invoiceBoxes && item.invoiceBoxes.length > 0) {
+      item.invoiceBoxes.forEach(invoice => {
+        const isPdf = invoice.fileName.toLowerCase().endsWith('.pdf')
+        images.push({
+          url: invoice.filePath,
+          itemId: item.id,
+          invoiceId: invoice.id,
+          fileName: invoice.fileName,
+          isPdf
+        })
+      })
+    }
+  })
+
+  return images
+})
 
 // 计算属性
 const emptyRowCount = computed(() => {
@@ -377,14 +424,32 @@ const handleClose = () => {
 }
 
 const handlePrint = () => {
-  // 打印指定区域
+  console.log('[PrintPreview] 开始打印流程')
+
+  // 打印指定区域（包括报销单和发票）
   const printContent = document.getElementById('print-content')
-  if (!printContent) return
+  if (!printContent) {
+    console.error('[PrintPreview] 未找到打印内容元素')
+    return
+  }
+  console.log('[PrintPreview] 找到打印内容元素')
 
-  const printWindow = window.open('', '_blank')
-  if (!printWindow) return
+  // 关闭模态框以移除遮罩层，避免干扰打印对话框
+  console.log('[PrintPreview] 关闭模态框')
+  isOpen.value = false
 
-  // 克隆内容并将输入框的值设置为 value 属性
+  // 直接打开新窗口进行打印
+  console.log('[PrintPreview] 打开新窗口')
+  const printWindow = window.open('', '_blank', 'width=800,height=600')
+  if (!printWindow) {
+    console.error('[PrintPreview] 无法打开打印窗口，可能被浏览器阻止')
+    alert('无法打开打印窗口，请检查浏览器是否阻止了弹出窗口')
+    return
+  }
+  console.log('[PrintPreview] 新窗口已打开')
+
+  // 克隆报销单内容并将输入框的值设置为 value 属性
+  console.log('[PrintPreview] 克隆打印内容')
   const clonedContent = printContent.cloneNode(true) as HTMLElement
   const inputs = clonedContent.querySelectorAll('input')
   const originalInputs = printContent.querySelectorAll('input')
@@ -393,8 +458,42 @@ const handlePrint = () => {
     const originalInput = originalInputs[index] as HTMLInputElement
     input.setAttribute('value', originalInput.value)
   })
+  console.log('[PrintPreview] 已处理输入框内容')
+
+  // 根据用户选择决定是否包含发票内容
+  let invoiceHtml = ''
+  if (includePrintInvoices.value && invoiceImages.value.length > 0) {
+    console.log(`[PrintPreview] 包含 ${invoiceImages.value.length} 张发票`)
+    // 生成发票 HTML
+    const invoiceItems = invoiceImages.value.map((invoice, index) => {
+      if (invoice.isPdf) {
+        return `
+          <div class="invoice-item">
+            <iframe src="${invoice.url}#view=FitH&toolbar=0&navpanes=0&scrollbar=0"
+              class="invoice-pdf" title="发票 ${index + 1}"></iframe>
+          </div>
+        `
+      } else {
+        return `
+          <div class="invoice-item">
+            <img src="${invoice.url}" alt="发票 ${index + 1}" class="invoice-image" />
+          </div>
+        `
+      }
+    }).join('')
+
+    invoiceHtml = `
+      <div class="invoice-print-section">
+        <div class="page-break"></div>
+        <div class="invoice-grid">
+          ${invoiceItems}
+        </div>
+      </div>
+    `
+  }
 
   // 获取当前页面的所有样式表
+  console.log('[PrintPreview] 获取页面样式')
   const styles = Array.from(document.styleSheets)
     .map(styleSheet => {
       try {
@@ -403,12 +502,14 @@ const handlePrint = () => {
           .join('\n')
       } catch (e) {
         // 跨域样式表可能无法访问
+        console.warn('[PrintPreview] 无法访问某些样式表（跨域）', e)
         return ''
       }
     })
     .join('\n')
+  console.log('[PrintPreview] 样式获取完成')
 
-  printWindow.document.write(`
+  const htmlContent = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -465,6 +566,58 @@ const handlePrint = () => {
               page-break-inside: avoid;
               width: 100%;
             }
+
+            /* 发票打印样式 */
+            .invoice-print-section {
+              page-break-before: always;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
+            .page-break {
+              display: none;
+            }
+
+            .invoice-grid {
+              display: flex;
+              flex-direction: column;
+              width: 100%;
+              gap: 2mm;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            .invoice-item {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              page-break-inside: avoid;
+              padding: 0;
+              margin: 0;
+              height: 47vh;
+              width: 100%;
+              box-sizing: border-box;
+            }
+
+            /* 发票图片完整显示，同时限制宽度和高度 */
+            .invoice-image {
+              max-width: 100%;
+              max-height: 100%;
+              width: auto;
+              height: auto;
+              object-fit: contain;
+              display: block;
+            }
+
+            .invoice-pdf {
+              width: 100%;
+              height: 100%;
+              border: none;
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
           }
 
           /* 屏幕显示样式 */
@@ -478,6 +631,50 @@ const handlePrint = () => {
               max-width: 210mm;
               margin: 0 auto;
               box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+
+            .invoice-print-section {
+              max-width: 210mm;
+              margin: 0 auto;
+            }
+
+            .page-break {
+              height: 2px;
+              background: #e5e7eb;
+              margin: 20px 0;
+            }
+
+            .invoice-grid {
+              display: flex;
+              flex-direction: column;
+              gap: 20px;
+            }
+
+            .invoice-item {
+              flex: 1;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 0;
+              background: white;
+              min-height: 600px;
+              overflow: hidden;
+            }
+
+            .invoice-image {
+              max-width: 100%;
+              max-height: 100%;
+              width: auto;
+              height: auto;
+              object-fit: contain;
+            }
+
+            .invoice-pdf {
+              width: 100%;
+              height: 600px;
+              border: none;
             }
           }
 
@@ -500,18 +697,172 @@ const handlePrint = () => {
       </head>
       <body>
         ${clonedContent.innerHTML}
+        ${invoiceHtml}
       </body>
     </html>
-  `)
+  `
 
+  console.log('[PrintPreview] 写入HTML内容到新窗口')
+  printWindow.document.open()
+  printWindow.document.write(htmlContent)
   printWindow.document.close()
-  printWindow.focus()
+  console.log('[PrintPreview] HTML内容写入完成')
 
-  // 等待内容和样式加载后打印
-  setTimeout(() => {
-    printWindow.print()
-    printWindow.close()
-  }, 500)
+  // 等待文档加载完成后执行打印脚本
+  printWindow.addEventListener('load', () => {
+    console.log('[PrintPreview] 打印窗口加载完成，开始执行打印逻辑')
+
+    const iframes = printWindow.document.querySelectorAll('iframe')
+    const images = printWindow.document.querySelectorAll('img')
+
+    console.log('[PrintPreview] 检测到内容:', {
+      iframes: iframes.length,
+      images: images.length
+    })
+
+    const doPrint = () => {
+      console.log('[PrintPreview] 准备调用打印对话框')
+      try {
+        console.log('[PrintPreview] 聚焦打印窗口')
+        printWindow.focus()
+
+        // 使用 requestAnimationFrame 确保渲染完成
+        printWindow.requestAnimationFrame(() => {
+          console.log('[PrintPreview] requestAnimationFrame 回调执行')
+
+          // 再次确保窗口获得焦点
+          printWindow.focus()
+
+          // 延迟一小段时间确保浏览器准备好
+          setTimeout(() => {
+            console.log('[PrintPreview] 调用 printWindow.print()')
+
+            // 检查打印功能是否可用
+            if (typeof printWindow.print === 'function') {
+              printWindow.print()
+              console.log('[PrintPreview] printWindow.print() 调用完成')
+
+              // 监听打印对话框关闭事件
+              printWindow.addEventListener('afterprint', () => {
+                console.log('[PrintPreview] 打印对话框已关闭')
+                printWindow.close()
+              })
+
+              // 备用：如果用户取消打印，也要关闭窗口
+              setTimeout(() => {
+                if (!printWindow.closed) {
+                  console.log('[PrintPreview] 超时关闭打印窗口')
+                  printWindow.close()
+                }
+              }, 60000) // 60秒后自动关闭
+            } else {
+              console.error('[PrintPreview] print() 函数不可用')
+              alert('打印功能不可用，请手动使用浏览器的打印功能（Ctrl+P）')
+            }
+          }, 100)
+        })
+      } catch (e: any) {
+        console.error('[PrintPreview] 打印失败:', e)
+        alert('打印失败: ' + (e.message || '未知错误'))
+        // 出错时也要关闭窗口
+        printWindow.close()
+      }
+    }
+
+    if (iframes.length > 0) {
+      // 有 PDF iframe，监听加载完成
+      console.log('[PrintPreview] 检测到PDF iframe，等待加载完成')
+      let loadedCount = 0
+      const totalIframes = iframes.length
+      let hasStartedPrint = false
+
+      const checkIframeLoaded = () => {
+        loadedCount++
+        console.log('[PrintPreview] iframe 加载进度:', loadedCount + '/' + totalIframes)
+        if (loadedCount >= totalIframes && !hasStartedPrint) {
+          hasStartedPrint = true
+          console.log('[PrintPreview] 所有 iframe 加载完成，等待2秒后打印')
+          setTimeout(() => {
+            console.log('[PrintPreview] iframe 等待时间结束，开始打印')
+            doPrint()
+          }, 2000)
+        }
+      }
+
+      iframes.forEach((iframe) => {
+        // 监听 iframe 加载完成
+        iframe.addEventListener('load', () => {
+          console.log('[PrintPreview] iframe 加载成功')
+          checkIframeLoaded()
+        })
+        iframe.addEventListener('error', () => {
+          console.error('[PrintPreview] iframe 加载失败')
+          checkIframeLoaded()
+        })
+
+        // 如果 iframe 已经加载完成
+        try {
+          if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+            console.log('[PrintPreview] iframe 已加载')
+            checkIframeLoaded()
+          }
+        } catch (e) {
+          // 跨域 iframe 无法访问 contentDocument，忽略错误
+          console.log('[PrintPreview] 无法访问 iframe contentDocument（可能是跨域）')
+        }
+      })
+
+      // 设置超时保护，最多等待 8 秒
+      setTimeout(() => {
+        if (!hasStartedPrint) {
+          hasStartedPrint = true
+          console.log('[PrintPreview] iframe 加载超时，强制开始打印')
+          doPrint()
+        }
+      }, 8000)
+    } else if (images.length > 0) {
+      // 有图片，等待图片加载
+      console.log('[PrintPreview] 检测到图片，等待图片加载')
+      let loadedCount = 0
+      const totalImages = images.length
+
+      const checkLoaded = () => {
+        loadedCount++
+        console.log('[PrintPreview] 图片加载进度:', loadedCount + '/' + totalImages)
+        if (loadedCount >= totalImages) {
+          console.log('[PrintPreview] 所有图片加载完成，等待500ms后打印')
+          setTimeout(() => {
+            console.log('[PrintPreview] 图片等待时间结束，开始打印')
+            doPrint()
+          }, 500)
+        }
+      }
+
+      images.forEach((img) => {
+        if (img.complete) {
+          console.log('[PrintPreview] 图片已加载:', img.src)
+          checkLoaded()
+        } else {
+          console.log('[PrintPreview] 等待图片加载:', img.src)
+          img.addEventListener('load', () => {
+            console.log('[PrintPreview] 图片加载成功:', img.src)
+            checkLoaded()
+          })
+          img.addEventListener('error', () => {
+            console.error('[PrintPreview] 图片加载失败:', img.src)
+            checkLoaded()
+          })
+        }
+      })
+    } else {
+      // 没有图片或 PDF
+      console.log('[PrintPreview] 无图片或PDF，等待500ms后打印')
+      setTimeout(() => {
+        console.log('[PrintPreview] 等待时间结束，开始打印')
+        doPrint()
+      }, 500)
+    }
+  })
 }
 
 // 监听弹框打开，初始化数据
@@ -557,5 +908,79 @@ input[type="number"]::-webkit-outer-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* 裁剪线样式 */
+.cut-line-container {
+  width: 100%;
+  padding: 1rem 0;
+}
+
+.cut-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.cut-line-text {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.cut-line-dashed {
+  flex: 1;
+  height: 1px;
+  border-top: 2px dashed #d1d5db;
+}
+
+/* 发票打印区域样式 */
+.invoice-print-section {
+  background: white;
+  padding: 2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.page-break {
+  height: 2px;
+  background: #e5e7eb;
+  margin: 1.5rem 0;
+}
+
+.invoice-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.invoice-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0;
+  background: #f9fafb;
+  min-height: 600px;
+  overflow: hidden;
+}
+
+.invoice-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  padding: 1.5rem;
+}
+
+.invoice-pdf {
+  width: 100%;
+  height: 600px;
+  border: none;
 }
 </style>

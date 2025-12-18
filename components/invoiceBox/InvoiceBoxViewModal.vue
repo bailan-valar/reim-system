@@ -211,7 +211,17 @@
         </div>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-6 border-t mt-6">
+        <div class="flex justify-between items-center pt-6 border-t mt-6">
+          <button
+            @click="handleDelete"
+            :disabled="deleting"
+            class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            {{ deleting ? '删除中...' : '删除发票' }}
+          </button>
           <button
             @click="$emit('close')"
             class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
@@ -234,9 +244,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   unlinked: []
+  deleted: []
 }>()
 
 const unlinking = ref(false)
+const deleting = ref(false)
 
 async function handleUnlink() {
   if (!confirm('确定要取消与报销单的关联吗？取消后该发票将恢复为"未使用"状态。')) {
@@ -260,6 +272,32 @@ async function handleUnlink() {
     alert(error.data?.message || '取消关联失败')
   } finally {
     unlinking.value = false
+  }
+}
+
+async function handleDelete() {
+  const confirmMessage = props.invoice.status === '已使用'
+    ? '确定要删除此发票吗？删除后将自动取消与报销单的关联，且无法恢复。'
+    : '确定要删除此发票吗？删除后无法恢复。'
+
+  if (!confirm(confirmMessage)) {
+    return
+  }
+
+  deleting.value = true
+  try {
+    await $fetch(`/api/invoice-box/${props.invoice.id}`, {
+      method: 'DELETE'
+    })
+
+    alert('发票删除成功')
+    emit('deleted')
+    emit('close')
+  } catch (error: any) {
+    console.error('删除发票失败:', error)
+    alert(error.data?.message || '删除发票失败')
+  } finally {
+    deleting.value = false
   }
 }
 

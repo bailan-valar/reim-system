@@ -24,11 +24,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check if invoice is already used
-    if (invoice.status === '已使用') {
-      throw createError({
-        statusCode: 400,
-        message: '发票已被使用，无法删除'
+    // If invoice is used, unlink it first
+    if (invoice.status === '已使用' && invoice.usedInItemId) {
+      // Remove the association by setting usedInItemId to null
+      await prisma.invoiceBox.update({
+        where: { id },
+        data: {
+          status: '未使用',
+          usedInItemId: null
+        }
       })
     }
 

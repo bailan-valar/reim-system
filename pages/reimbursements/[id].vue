@@ -147,6 +147,7 @@
       v-if="showInvoiceBoxViewModal && viewingInvoiceBox"
       :invoice="viewingInvoiceBox"
       @close="closeInvoiceBoxViewModal"
+      @deleted="handleInvoiceBoxDeleted"
     />
 
     <!-- Print Preview Modal -->
@@ -320,6 +321,11 @@ const handleViewInvoiceBox = (invoiceBox: InvoiceBox) => {
 const closeInvoiceBoxViewModal = () => {
   showInvoiceBoxViewModal.value = false
   viewingInvoiceBox.value = null
+}
+
+const handleInvoiceBoxDeleted = async () => {
+  closeInvoiceBoxViewModal()
+  await loadReimbursement()
 }
 
 const closeItemModal = () => {

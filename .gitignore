@@ -28,4 +28,5 @@ prisma/*.db
 prisma/*.db-journal
 
 # Uploads
+public/uploads.*/
 public/uploads/

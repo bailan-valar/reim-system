@@ -178,6 +178,7 @@
       :invoice="viewingInvoice"
       @close="viewingInvoice = null"
       @unlinked="handleUnlinked"
+      @deleted="handleDeleted"
     />
 
     <!-- Upload Invoice Modal -->
@@ -361,6 +362,11 @@ async function handleUploadSuccess(uploadedInvoiceIds?: string[]) {
 }
 
 async function handleUnlinked() {
+  viewingInvoice.value = null
+  await loadInvoices()
+}
+
+async function handleDeleted() {
   viewingInvoice.value = null
   await loadInvoices()
 }
