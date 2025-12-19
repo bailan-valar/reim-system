@@ -12,7 +12,7 @@
         <input
           ref="fileInput"
           type="file"
-          accept=".pdf,.ofd"
+          accept=".pdf"
           multiple
           class="hidden"
           @change="handleFileSelect"
@@ -23,7 +23,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
           <p class="mt-2 text-sm text-gray-600">
-            拖拽PDF或OFD发票到此处或
+            拖拽PDF发票到此处或
             <button
               type="button"
               class="text-primary-600 hover:text-primary-700 font-medium"
@@ -33,7 +33,7 @@
             </button>
           </p>
           <p class="mt-1 text-xs text-gray-500">
-            支持批量上传多个PDF或OFD发票文件 (每个最大 10MB)
+            支持批量上传多个PDF发票文件 (每个最大 10MB)
           </p>
           <p class="mt-1 text-xs text-gray-500">
             系统将自动识别发票信息并创建报销单
@@ -297,11 +297,10 @@ const addFiles = (files: File[]) => {
   error.value = ''
 
   for (const file of files) {
-    // Check file type - accept both PDF and OFD
-    const isValidType = file.name.toLowerCase().endsWith('.pdf') ||
-                        file.name.toLowerCase().endsWith('.ofd')
+    // Check file type - only accept PDF
+    const isValidType = file.name.toLowerCase().endsWith('.pdf')
     if (!isValidType) {
-      error.value = '仅支持PDF和OFD文件'
+      error.value = '仅支持PDF文件'
       continue
     }
 

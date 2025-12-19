@@ -4,9 +4,9 @@
     <header class="bg-white shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div>
-          <NuxtLink to="/reimbursements" class="text-primary-600 hover:text-primary-700 text-sm font-medium mb-2 inline-block">
-            ← 返回列表
-          </NuxtLink>
+          <button @click="router.go(-1)" class="text-primary-600 hover:text-primary-700 text-sm font-medium mb-2 inline-block">
+            ← 返回
+          </button>
           <div class="flex items-center justify-between">
             <h1 class="text-3xl font-bold text-gray-900">报销单详情</h1>
             <div class="flex gap-3">
@@ -166,6 +166,7 @@ import type { InvoiceBox } from '~/types/invoiceBox'
 import { formatCurrency, formatDateTime, formatDate } from '~/utils/formatters'
 
 const route = useRoute()
+const router = useRouter()
 const id = route.params.id as string
 
 const { fetchReimbursement, updateReimbursement, deleteReimbursement } = useReimbursements()

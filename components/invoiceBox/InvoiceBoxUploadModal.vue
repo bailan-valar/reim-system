@@ -43,7 +43,7 @@
           <input
             ref="fileInput"
             type="file"
-            accept=".pdf,.ofd,.png,.jpg,.jpeg"
+            accept=".pdf,.png,.jpg,.jpeg"
             multiple
             @change="handleFileSelect"
             class="hidden"
@@ -60,7 +60,7 @@
             >
               点击选择文件
             </button>
-            <p class="text-xs text-gray-500 mt-2">支持 PDF, OFD, PNG, JPG 格式，最大 10MB，支持批量上传</p>
+            <p class="text-xs text-gray-500 mt-2">支持 PDF, PNG, JPG 格式，最大 10MB，支持批量上传</p>
           </div>
 
           <div v-else class="space-y-2">

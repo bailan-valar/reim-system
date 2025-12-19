@@ -6,6 +6,11 @@ export default defineEventHandler(async (event) => {
     const { sortBy = 'name', order = 'asc' } = query
 
     const companies = await prisma.company.findMany({
+      include: {
+        _count: {
+          select: { reimbursements: true }
+        }
+      },
       orderBy: {
         [sortBy as string]: order
       }

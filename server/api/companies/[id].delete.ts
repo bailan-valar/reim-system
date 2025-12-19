@@ -11,23 +11,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // 检查公司是否存在
     const company = await prisma.company.findUnique({
       where: { id },
       include: {
         _count: {
           select: { reimbursements: true }
-        },
-        reimbursements: {
-          select: {
-            id: true,
-            title: true,
-            totalAmount: true,
-            status: true,
-            createdAt: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
         }
       }
     })
@@ -39,22 +28,27 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 计算总金额
-    const totalAmount = company.reimbursements.reduce(
-      (sum, reimbursement) => sum + reimbursement.totalAmount,
-      0
-    )
+    // 如果有关联报销单，将它们的 companyId 设为 null
+    if (company._count.reimbursements > 0) {
+      await prisma.reimbursement.updateMany({
+        where: { companyId: id },
+        data: { companyId: null }
+      })
+    }
+
+    // 删除公司
+    await prisma.company.delete({
+      where: { id }
+    })
 
     return {
-      data: {
-        ...company,
-        totalAmount
-      }
+      success: true,
+      message: '公司已删除'
     }
   } catch (error: any) {
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || '获取公司详情失败'
+      message: error.message || '删除公司失败'
     })
   }
 })

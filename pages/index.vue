@@ -6,7 +6,10 @@
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold text-gray-900">个人报销管理系统</h1>
           <div class="flex gap-3">
-            <UiButton variant="outline" @click="navigateTo('/invoice-box')">
+            <UiButton variant="secondary" @click="navigateTo('/companies')">
+              公司管理
+            </UiButton>
+            <UiButton variant="secondary" @click="navigateTo('/invoice-box')">
               发票收集箱
             </UiButton>
             <UiButton @click="navigateTo('/reimbursements/new')">
@@ -20,7 +23,26 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Quick Actions -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <UiCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="navigateTo('/companies')">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 p-3 bg-purple-100 rounded-lg">
+                <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="text-lg font-semibold text-gray-900">公司管理</h3>
+                <p class="text-sm text-gray-600">管理公司信息和设置</p>
+              </div>
+            </div>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </UiCard>
+
         <UiCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="navigateTo('/invoice-box')">
           <div class="flex items-center justify-between">
             <div class="flex items-center">

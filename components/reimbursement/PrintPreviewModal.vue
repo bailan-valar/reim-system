@@ -4,13 +4,16 @@
       <!-- 预览内容 -->
       <div id="print-content" class="print-content bg-white p-8 border border-gray-200 rounded-lg">
         <!-- 公司名称 -->
-        <div class="company-header text-center text-xl font-bold mb-4">
+        <div class="company-header flex items-center justify-between text-xl font-bold mb-1">
+          <!-- 公司 Logo -->
+          <img v-if="companyLogo" :src="companyLogo" alt="公司Logo" class="company-logo" />
           <input v-model="editableData.companyName" type="text"
-            class="w-full text-center border-b border-gray-300 focus:border-primary-500 outline-none" />
+            class="flex-1 text-center border-b border-gray-300 focus:border-primary-500 outline-none" />
+          <div v-if="companyLogo" class="company-logo-placeholder" style="width: 120px; height: 60px;"></div>
         </div>
 
         <!-- 部门和标题 -->
-        <div class="title-row flex justify-between items-center mb-4">
+        <div class="title-row flex justify-between items-center mb-1">
           <div class="department flex items-center gap-2">
             <span>部门：</span>
             <input v-model="editableData.department" type="text"
@@ -164,20 +167,16 @@
         </div>
 
         <!-- 报销日期 -->
-        <div class="footer-date text-right mt-4">
+        <div class="footer-date text-right">
           <span>报销日期：</span>
           <input v-model="editableData.reimbursementDate" type="text"
-            class="border-b border-gray-300 focus:border-primary-500 outline-none w-48" />
+            class="border-b border-gray-300 focus:border-primary-500 outline-none w-36" />
         </div>
 
         <!-- 裁剪分割线 -->
-        <div class="cut-line-container mt-8">
+        <div class="cut-line-container">
           <div class="cut-line">
-            <span class="cut-line-text">✂</span>
             <div class="cut-line-dashed"></div>
-            <span class="cut-line-text">裁剪线</span>
-            <div class="cut-line-dashed"></div>
-            <span class="cut-line-text">✂</span>
           </div>
         </div>
       </div>
@@ -285,6 +284,11 @@ const emit = defineEmits<{
 const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
+})
+
+// 公司 Logo
+const companyLogo = computed(() => {
+  return props.reimbursement.company?.logoUrl || null
 })
 
 // 初始化可编辑数据
@@ -675,16 +679,16 @@ const handlePrint = async () => {
           /* 打印专用样式 */
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 5mm;
           }
 
           @page :first {
-            margin: 10mm;
+            margin: 5mm;
           }
 
           @page invoice {
             size: A4 portrait;
-            margin: 0;
+            margin: 0mm;
           }
 
           @media print {
@@ -706,6 +710,17 @@ const handlePrint = async () => {
               transform-origin: top left;
             }
 
+            /* 公司 Logo 打印样式 */
+            .company-logo {
+              height: 60px !important;
+              width: auto !important;
+              max-width: 120px !important;
+              object-fit: contain !important;
+              margin-right: 8px !important;
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+
             /* 提高图片打印质量 */
             img {
               image-rendering: -webkit-optimize-contrast;
@@ -720,16 +735,18 @@ const handlePrint = async () => {
               outline: none !important;
             }
 
-            /* 确保背景色打印 */
+            /* 移除所有背景色 */
             * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
+              background: none !important;
+              background-color: transparent !important;
             }
 
             /* 防止分页 */
             .print-content {
               page-break-inside: avoid;
+              background: none !important;
+              padding: 0 !important;
+              border: none !important;
             }
 
             table {
@@ -901,6 +918,30 @@ const handlePrint = async () => {
         console.log('[PrintPreview] 聚焦打印窗口')
         printWindow.focus()
 
+        // 设置打印完成和取消的处理
+        let printHandled = false
+
+        const handleAfterPrint = () => {
+          if (!printHandled) {
+            printHandled = true
+            console.log('[PrintPreview] 打印对话框已关闭（afterprint）')
+            setTimeout(() => {
+              if (!printWindow.closed) {
+                printWindow.close()
+                console.log('[PrintPreview] 打印窗口已关闭')
+              }
+            }, 100)
+          }
+        }
+
+        const handleBeforePrint = () => {
+          console.log('[PrintPreview] 打印对话框已打开（beforeprint）')
+        }
+
+        // 提前注册事件监听器
+        printWindow.addEventListener('afterprint', handleAfterPrint)
+        printWindow.addEventListener('beforeprint', handleBeforePrint)
+
         // 使用 requestAnimationFrame 确保渲染完成
         printWindow.requestAnimationFrame(() => {
           console.log('[PrintPreview] requestAnimationFrame 回调执行')
@@ -917,22 +958,30 @@ const handlePrint = async () => {
               printWindow.print()
               console.log('[PrintPreview] printWindow.print() 调用完成')
 
-              // 监听打印对话框关闭事件
-              printWindow.addEventListener('afterprint', () => {
-                console.log('[PrintPreview] 打印对话框已关闭')
-                printWindow.close()
-              })
+              // 备用方案：监听窗口失去焦点（用户可能关闭了打印对话框）
+              const handleBlur = () => {
+                setTimeout(() => {
+                  if (!printHandled && !printWindow.closed) {
+                    printHandled = true
+                    console.log('[PrintPreview] 检测到窗口失去焦点，准备关闭')
+                    printWindow.close()
+                  }
+                }, 500)
+              }
+              printWindow.addEventListener('blur', handleBlur, { once: true })
 
-              // 备用：如果用户取消打印，也要关闭窗口
+              // 最终备用：如果所有事件都没触发，5秒后自动关闭
               setTimeout(() => {
-                if (!printWindow.closed) {
+                if (!printHandled && !printWindow.closed) {
+                  printHandled = true
                   console.log('[PrintPreview] 超时关闭打印窗口')
                   printWindow.close()
                 }
-              }, 60000) // 60秒后自动关闭
+              }, 5000)
             } else {
               console.error('[PrintPreview] print() 函数不可用')
               alert('打印功能不可用，请手动使用浏览器的打印功能（Ctrl+P）')
+              printWindow.close()
             }
           }, 100)
         })
@@ -1018,6 +1067,15 @@ onMounted(() => {
 
 .print-content {
   font-family: 'SimSun', '宋体', serif;
+}
+
+/* 公司 Logo 样式 */
+.company-logo {
+  height: 60px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  margin-right: 8px;
 }
 
 .reimbursement-table input {

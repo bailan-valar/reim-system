@@ -507,8 +507,9 @@ export async function recognizeInvoiceBuffer(
     console.log('[TENCENT-OCR] Starting invoice recognition from buffer')
     console.log(`[TENCENT-OCR] File type: ${fileType}, Buffer size: ${buffer.length} bytes`)
 
-    // Determine if it's a PDF
+    // Determine if it's a PDF or OFD
     const isPdf = fileType === 'application/pdf' || fileType.includes('pdf')
+    const isOfd = fileType === 'application/ofd' || fileType === 'application/x-ofd' || fileType.includes('ofd')
 
     // Convert buffer to base64
     const base64Data = buffer.toString('base64')
@@ -517,6 +518,8 @@ export async function recognizeInvoiceBuffer(
     // Add data URI prefix for better compatibility
     const dataUri = isPdf
       ? `data:application/pdf;base64,${base64Data}`
+      : isOfd
+      ? `data:application/ofd;base64,${base64Data}`
       : `data:${fileType};base64,${base64Data}`
 
     console.log('[TENCENT-OCR] Created data URI with prefix:', dataUri.substring(0, 50) + '...')
@@ -568,6 +571,8 @@ export async function recognizeInvoiceFromFile(filePath: string): Promise<Tencen
 
     if (ext === '.pdf') {
       fileType = 'application/pdf'
+    } else if (ext === '.ofd') {
+      fileType = 'application/ofd'
     } else if (ext === '.png') {
       fileType = 'image/png'
     } else if (ext === '.jpg' || ext === '.jpeg') {
