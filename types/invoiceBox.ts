@@ -17,6 +17,7 @@ export interface InvoiceBox {
   invoiceDate: Date | string
   buyerName?: string | null
   remark?: string | null
+  expenseCategory?: string | null  // 费用项目名称（从OCR识别的Name字段）
   tags?: string | null
   fileName: string
   filePath: string
@@ -48,6 +49,7 @@ export interface CreateInvoiceBoxInput {
   invoiceDate: Date | string
   buyerName?: string
   remark?: string
+  expenseCategory?: string
   tags?: string
   fileName: string
   filePath: string
@@ -62,6 +64,7 @@ export interface UpdateInvoiceBoxInput {
   invoiceDate?: Date | string
   buyerName?: string
   remark?: string
+  expenseCategory?: string
   tags?: string
   status?: InvoiceBoxStatus
   usedInItemId?: string

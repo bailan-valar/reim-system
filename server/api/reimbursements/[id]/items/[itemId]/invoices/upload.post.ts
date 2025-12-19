@@ -54,7 +54,8 @@ export default defineEventHandler(async (event) => {
         filePath: uploadedFile.filePath,
         amount: uploadedFile.invoiceData?.amount || 0,
         date: uploadedFile.invoiceData?.date || new Date(),
-        description: uploadedFile.invoiceData?.description || file.name
+        description: uploadedFile.invoiceData?.description || file.name,
+        expenseCategory: uploadedFile.invoiceData?.expenseCategory || null
       }
     })
 

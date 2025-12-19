@@ -118,6 +118,18 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
+              费用项目
+            </label>
+            <input
+              v-model="form.expenseCategory"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="请输入费用项目（如：餐饮费、交通费等）"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
               备注
             </label>
             <textarea
@@ -193,6 +205,7 @@ const form = ref({
   taxAmount: props.invoice.taxAmount,
   invoiceDate: new Date(props.invoice.invoiceDate).toISOString().split('T')[0],
   buyerName: props.invoice.buyerName || '',
+  expenseCategory: props.invoice.expenseCategory || '',
   remark: props.invoice.remark || '',
   tags: props.invoice.tags || ''
 })
@@ -212,6 +225,7 @@ async function handleSubmit() {
         taxAmount: form.value.taxAmount,
         invoiceDate: form.value.invoiceDate,
         buyerName: form.value.buyerName,
+        expenseCategory: form.value.expenseCategory,
         remark: form.value.remark,
         tags: form.value.tags
       }

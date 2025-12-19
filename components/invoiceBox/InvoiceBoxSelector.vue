@@ -72,6 +72,30 @@
               上传发票
             </button>
           </div>
+
+          <!-- Second row: Tags and Sort -->
+          <div class="flex gap-4">
+            <select
+              v-model="selectedTag"
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+            >
+              <option value="">全部标签</option>
+              <option v-for="tag in tagList" :key="tag" :value="tag">
+                {{ tag }}
+              </option>
+            </select>
+            <select
+              v-model="sortBy"
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+            >
+              <option value="">默认排序</option>
+              <option value="amount-desc">金额从高到低</option>
+              <option value="amount-asc">金额从低到高</option>
+              <option value="date-desc">开票日期从新到旧</option>
+              <option value="date-asc">开票日期从旧到新</option>
+            </select>
+            <div class="flex-1"></div>
+          </div>
         </div>
       </div>
 
@@ -227,6 +251,8 @@ const showUploadModal = ref(false)
 const searchQuery = ref('')
 const selectedType = ref('')
 const selectedBuyer = ref('')
+const selectedTag = ref('')
+const sortBy = ref('')
 const amountFilterEnabled = ref(false)
 const amountTolerance = ref(0.05) // Default 5% tolerance
 
@@ -257,6 +283,19 @@ const buyerList = computed(() => {
     .map(invoice => invoice.buyerName)
     .filter((buyer): buyer is string => !!buyer)
   return [...new Set(buyers)].sort()
+})
+
+// Get unique tag list from invoices
+const tagList = computed(() => {
+  const tags: string[] = []
+  invoices.value.forEach(invoice => {
+    if (invoice.tags) {
+      // Split tags by comma and trim whitespace
+      const invoiceTags = invoice.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+      tags.push(...invoiceTags)
+    }
+  })
+  return [...new Set(tags)].sort()
 })
 
 // Calculate amount range based on tolerance
@@ -338,11 +377,40 @@ const filteredInvoices = computed(() => {
     result = result.filter(invoice => invoice.buyerName === selectedBuyer.value)
   }
 
+  // Filter by tag
+  if (selectedTag.value) {
+    result = result.filter(invoice => {
+      if (!invoice.tags) return false
+      const invoiceTags = invoice.tags.split(',').map(tag => tag.trim())
+      return invoiceTags.includes(selectedTag.value)
+    })
+  }
+
   // Filter by amount (when checkbox is enabled)
   if (props.expenseAmount && amountFilterEnabled.value) {
     result = result.filter(invoice => {
       return invoice.totalAmount >= minAmount.value && invoice.totalAmount <= maxAmount.value
     })
+  }
+
+  // Sort results
+  if (sortBy.value) {
+    result = [...result] // Create a copy to avoid mutating the original array
+
+    switch (sortBy.value) {
+      case 'amount-desc':
+        result.sort((a, b) => b.totalAmount - a.totalAmount)
+        break
+      case 'amount-asc':
+        result.sort((a, b) => a.totalAmount - b.totalAmount)
+        break
+      case 'date-desc':
+        result.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime())
+        break
+      case 'date-asc':
+        result.sort((a, b) => new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime())
+        break
+    }
   }
 
   return result

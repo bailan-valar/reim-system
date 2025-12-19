@@ -24,6 +24,7 @@ export interface TencentInvoiceResult {
   sellerName?: string
   buyerName?: string
   remark?: string
+  expenseCategory?: string  // 费用项目名称（从Name字段识别）
   textDetections?: Array<{
     detectedText: string
     confidence: number
@@ -281,6 +282,20 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
   } else if (invoiceInfo.UserName) {
     result.buyerName = invoiceInfo.UserName
     console.log('[TENCENT-OCR] Buyer name (UserName):', result.buyerName)
+  }
+
+  // Extract expense category from Name field (Priority 1: top-level Name field)
+  if (invoiceInfo.Name && invoiceInfo.Name.trim() !== '') {
+    result.expenseCategory = invoiceInfo.Name
+    console.log('[TENCENT-OCR] Expense category (from Name field):', result.expenseCategory)
+  }
+  // Priority 2: Extract from VatElectronicItems[0].Name for electronic invoices
+  else if (invoiceInfo.VatElectronicItems && invoiceInfo.VatElectronicItems.length > 0) {
+    const firstItem = invoiceInfo.VatElectronicItems[0]
+    if (firstItem.Name && firstItem.Name.trim() !== '') {
+      result.expenseCategory = firstItem.Name
+      console.log('[TENCENT-OCR] Expense category (from VatElectronicItems[0].Name):', result.expenseCategory)
+    }
   }
 
   // Generate remark for specific invoice types

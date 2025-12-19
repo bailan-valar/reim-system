@@ -18,7 +18,7 @@
         <ReimbursementForm
           :loading="loading"
           @submit="handleSubmit"
-          @cancel="navigateTo('/reimbursements')"
+          @cancel="router.go(-1)"
         />
       </UiCard>
     </main>
@@ -32,6 +32,7 @@ definePageMeta({
   keepalive: false
 })
 
+const router = useRouter()
 const { createReimbursement } = useReimbursements()
 const loading = ref(false)
 

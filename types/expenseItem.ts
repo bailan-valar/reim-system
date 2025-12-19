@@ -33,6 +33,7 @@ export interface CreateExpenseItemInput {
   hasInvoice?: boolean
   departure?: string
   arrival?: string
+  invoiceBoxIds?: string[]
 }
 
 export interface UpdateExpenseItemInput {

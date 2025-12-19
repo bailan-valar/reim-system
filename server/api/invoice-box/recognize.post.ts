@@ -55,7 +55,8 @@ export default defineEventHandler(async (event) => {
           invoiceDate: tencentResult.invoiceDate,
           sellerName: tencentResult.sellerName,
           buyerName: tencentResult.buyerName,
-          remark: tencentResult.remark
+          remark: tencentResult.remark,
+          expenseCategory: tencentResult.expenseCategory
         }
       } else {
         console.log('[INVOICE-RECOGNIZE] Tencent OCR failed:', tencentResult.error)

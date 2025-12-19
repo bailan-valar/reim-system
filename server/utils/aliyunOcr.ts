@@ -143,6 +143,7 @@ export interface InvoiceData {
   date: Date
   description: string
   category: string
+  expenseCategory?: string  // 费用项目名称（从Name字段识别）
   rawText: string
 }
 
@@ -392,6 +393,24 @@ function parseInvoiceFromText(text: string): InvoiceData | null {
       console.log(`[ALIYUN-OCR] Date found: ${date.toISOString().split('T')[0]}`)
     }
 
+    // Extract expense category from Name field
+    let expenseCategory: string | undefined
+    const namePatterns = [
+      /(?:货物或应税劳务、服务)?名称[：:]\s*([^\n\r]+)/,
+      /Name[：:]\s*([^\n\r]+)/i,
+      /项目名称[：:]\s*([^\n\r]+)/,
+      /品名[：:]\s*([^\n\r]+)/
+    ]
+
+    for (const pattern of namePatterns) {
+      const match = text.match(pattern)
+      if (match && match[1] && match[1].trim() !== '') {
+        expenseCategory = match[1].trim()
+        console.log(`[ALIYUN-OCR] Expense category found: ${expenseCategory}`)
+        break
+      }
+    }
+
     // Determine invoice type and category
     let description = '发票'
     let category = '其他'
@@ -423,7 +442,8 @@ function parseInvoiceFromText(text: string): InvoiceData | null {
       amount,
       date: date.toISOString().split('T')[0],
       description,
-      category
+      category,
+      expenseCategory
     })
 
     return {
@@ -431,6 +451,7 @@ function parseInvoiceFromText(text: string): InvoiceData | null {
       date,
       description,
       category,
+      expenseCategory,
       rawText: text
     }
   } catch (error) {

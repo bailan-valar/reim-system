@@ -175,6 +175,10 @@
                   <span class="text-gray-500">日期:</span>
                   <span class="ml-1 text-gray-900">{{ invoice.data.invoiceDate || '-' }}</span>
                 </div>
+                <div v-if="invoice.data.expenseCategory" class="col-span-2">
+                  <span class="text-gray-500">费用项目:</span>
+                  <span class="ml-1 text-gray-900 font-medium">{{ invoice.data.expenseCategory }}</span>
+                </div>
               </div>
               <div v-if="invoice.error" class="mt-2 text-xs text-red-600">
                 错误: {{ invoice.error }}
@@ -287,6 +291,18 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
+              费用项目
+            </label>
+            <input
+              v-model="form.expenseCategory"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="请输入费用项目（如：餐饮费、交通费等）"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
               备注
             </label>
             <textarea
@@ -381,6 +397,7 @@ interface RecognizedInvoice {
     invoiceDate?: string
     buyerName?: string
     remark?: string
+    expenseCategory?: string
   }
   uploaded: boolean
   uploadedId?: string
@@ -407,6 +424,7 @@ const form = ref({
   taxAmount: null as number | null,
   invoiceDate: new Date().toISOString().split('T')[0],
   buyerName: '',
+  expenseCategory: '',
   remark: '',
   tags: ''
 })
@@ -473,7 +491,8 @@ async function recognizeBatchInvoices() {
           taxAmount: response.data.taxAmount,
           invoiceDate: response.data.invoiceDate,
           buyerName: response.data.buyerName,
-          remark: response.data.remark
+          remark: response.data.remark,
+          expenseCategory: response.data.expenseCategory
         } : {
           invoiceNumber: `INV-${Date.now()}-${recognizedInvoices.value.length}`,
           totalAmount: 0,
@@ -493,6 +512,7 @@ async function recognizeBatchInvoices() {
         form.value.taxAmount = response.data.taxAmount ?? null
         form.value.invoiceDate = response.data.invoiceDate || new Date().toISOString().split('T')[0]
         form.value.buyerName = response.data.buyerName || ''
+        form.value.expenseCategory = response.data.expenseCategory || ''
         form.value.remark = response.data.remark || ''
       }
 
@@ -545,6 +565,9 @@ async function handleSubmit() {
       if (form.value.buyerName) {
         formData.append('buyerName', form.value.buyerName)
       }
+      if (form.value.expenseCategory) {
+        formData.append('expenseCategory', form.value.expenseCategory)
+      }
       if (form.value.remark) {
         formData.append('remark', form.value.remark)
       }
@@ -596,6 +619,9 @@ async function handleBatchSubmit() {
       formData.append('invoiceDate', invoice.data.invoiceDate || new Date().toISOString().split('T')[0])
       if (invoice.data.buyerName) {
         formData.append('buyerName', invoice.data.buyerName)
+      }
+      if (invoice.data.expenseCategory) {
+        formData.append('expenseCategory', invoice.data.expenseCategory)
       }
       if (invoice.data.remark) {
         formData.append('remark', invoice.data.remark)

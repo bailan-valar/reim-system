@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
     let invoiceDate: string | null = null
     let buyerName: string | null = null
     let remark: string | null = null
+    let expenseCategory: string | null = null
     let tags: string | null = null
 
     // Parse form data
@@ -44,6 +45,8 @@ export default defineEventHandler(async (event) => {
         buyerName = part.data.toString()
       } else if (part.name === 'remark') {
         remark = part.data.toString()
+      } else if (part.name === 'expenseCategory') {
+        expenseCategory = part.data.toString()
       } else if (part.name === 'tags') {
         tags = part.data.toString()
       }
@@ -86,6 +89,7 @@ export default defineEventHandler(async (event) => {
     const finalTaxRate = taxRate || ocrData?.taxRate || null
     const finalTaxAmount = taxAmount || ocrData?.taxAmount || null
     const finalBuyerName = buyerName || ocrData?.buyerName || null
+    const finalExpenseCategory = expenseCategory || ocrData?.expenseCategory || null
     const finalRemark = remark || ocrData?.remark || null
 
     // Check if invoice number already exists
@@ -110,6 +114,7 @@ export default defineEventHandler(async (event) => {
         taxAmount: finalTaxAmount,
         invoiceDate: new Date(finalInvoiceDate),
         buyerName: finalBuyerName,
+        expenseCategory: finalExpenseCategory,
         remark: finalRemark,
         tags: tags || null,
         fileName: uploadedFile.fileName,

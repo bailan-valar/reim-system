@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, 'id')
     const body = await readBody(event)
-    const { amount, date, description, category, hasInvoice, departure, arrival } = body
+    const { amount, date, description, category, hasInvoice, departure, arrival, invoiceBoxIds } = body
 
     if (!id) {
       throw createError({
@@ -41,6 +41,21 @@ export default defineEventHandler(async (event) => {
         arrival: arrival || null
       }
     })
+
+    // Link invoice boxes if provided
+    if (invoiceBoxIds && Array.isArray(invoiceBoxIds) && invoiceBoxIds.length > 0) {
+      // Update invoice box status to '已使用' and set usedInItemId
+      // This will automatically create the relation through the implicit many-to-many
+      await prisma.invoiceBox.updateMany({
+        where: {
+          id: { in: invoiceBoxIds }
+        },
+        data: {
+          status: '已使用',
+          usedInItemId: item.id
+        }
+      })
+    }
 
     // Update reimbursement total amount
     const items = await prisma.expenseItem.findMany({

@@ -87,6 +87,9 @@
               <h3 class="text-lg font-semibold text-gray-900">
                 关联的报销单 ({{ company.reimbursements?.length || 0 }})
               </h3>
+              <UiButton @click="navigateTo(`/reimbursements/new?companyId=${company.id}`)">
+                新增报销单
+              </UiButton>
             </div>
 
             <div v-if="!company.reimbursements || company.reimbursements.length === 0" class="text-center py-8">

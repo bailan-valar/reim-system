@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
         ...(body.taxAmount !== undefined && { taxAmount: body.taxAmount }),
         ...(body.invoiceDate && { invoiceDate: new Date(body.invoiceDate) }),
         ...(body.buyerName !== undefined && { buyerName: body.buyerName || null }),
+        ...(body.expenseCategory !== undefined && { expenseCategory: body.expenseCategory || null }),
         ...(body.remark !== undefined && { remark: body.remark || null }),
         ...(body.tags !== undefined && { tags: body.tags || null }),
         ...(body.status && { status: body.status }),

@@ -71,6 +71,7 @@ model Invoice {
   amount          Float       // 发票金额
   date            DateTime    // 发票日期
   description     String?     // 发票描述（从OCR识别）
+  expenseCategory String?     // 费用项目（从OCR识别的Name字段）
   uploadedAt      DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -92,6 +93,7 @@ model InvoiceBox {
   invoiceDate     DateTime     // 开票日期
   buyerName       String?      // 购买方名称
   remark          String?      // 备注信息（如火车票的行程信息）
+  expenseCategory String?      // 费用项目（从OCR识别的Name字段）
   tags            String?      // 标签（逗号分隔）
   fileName        String       // 附件文件名
   filePath        String       // 附件路径

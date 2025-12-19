@@ -1,5 +1,43 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
+    <!-- Invoice Selection Section -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <label class="text-sm font-medium text-gray-700">从发票箱选择发票（可选）</label>
+        <button
+          type="button"
+          @click="showInvoiceSelector = true"
+          class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          选择发票
+        </button>
+      </div>
+      <div v-if="selectedInvoice" class="bg-white rounded-lg p-3 border border-blue-300">
+        <div class="flex items-start justify-between">
+          <div class="flex-1 space-y-1">
+            <p class="text-sm font-medium text-gray-900">{{ selectedInvoice.invoiceNumber }}</p>
+            <p class="text-xs text-gray-600">{{ selectedInvoice.invoiceType }}</p>
+            <p class="text-sm font-semibold text-blue-600">¥{{ selectedInvoice.totalAmount.toFixed(2) }}</p>
+            <p class="text-xs text-gray-500">开票日期: {{ formatDate(selectedInvoice.invoiceDate) }}</p>
+          </div>
+          <button
+            type="button"
+            @click="clearSelectedInvoice"
+            class="text-gray-400 hover:text-red-600"
+            title="清除选择"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p v-else class="text-xs text-gray-500">选择发票后将自动填充金额、日期和类别信息</p>
+    </div>
+
     <UiInput
       v-model="formData.amount"
       type="number"
@@ -81,11 +119,21 @@
         {{ loading ? '保存中...' : '保存' }}
       </UiButton>
     </div>
+
+    <!-- Invoice Selector Modal -->
+    <ClientOnly>
+      <InvoiceBoxSelector
+        v-if="showInvoiceSelector"
+        @close="showInvoiceSelector = false"
+        @select="handleInvoiceSelected"
+      />
+    </ClientOnly>
   </form>
 </template>
 
 <script setup lang="ts">
 import type { ExpenseItem, CreateExpenseItemInput } from '~/types/expenseItem'
+import type { InvoiceBox } from '~/types/invoiceBox'
 import { EXPENSE_CATEGORIES } from '~/utils/constants'
 
 const props = defineProps<{
@@ -98,6 +146,9 @@ const emit = defineEmits<{
   submit: [data: CreateExpenseItemInput]
   cancel: []
 }>()
+
+const showInvoiceSelector = ref(false)
+const selectedInvoice = ref<InvoiceBox | null>(null)
 
 const getDefaultDate = () => {
   if (props.item?.date) {
@@ -137,6 +188,97 @@ const categoryOptions = EXPENSE_CATEGORIES.map(category => ({
   label: category
 }))
 
+// Map invoice expense category to form category
+const mapInvoiceCategoryToFormCategory = (expenseCategory?: string | null): string => {
+  if (!expenseCategory) return ''
+
+  // Direct match
+  if (EXPENSE_CATEGORIES.includes(expenseCategory as any)) {
+    return expenseCategory
+  }
+
+  // Fuzzy matching for common categories
+  const categoryLower = expenseCategory.toLowerCase()
+
+  if (categoryLower.includes('餐') || categoryLower.includes('饮食') || categoryLower.includes('食')) {
+    return '餐饮'
+  }
+  if (categoryLower.includes('交通') || categoryLower.includes('打车') || categoryLower.includes('出租')) {
+    return '交通'
+  }
+  if (categoryLower.includes('住宿') || categoryLower.includes('酒店') || categoryLower.includes('宾馆')) {
+    return '住宿'
+  }
+  if (categoryLower.includes('火车') || categoryLower.includes('高铁') || categoryLower.includes('动车')) {
+    return '火车'
+  }
+  if (categoryLower.includes('飞机') || categoryLower.includes('机票') || categoryLower.includes('航空')) {
+    return '飞机'
+  }
+  if (categoryLower.includes('办公') || categoryLower.includes('文具') || categoryLower.includes('用品')) {
+    return '办公用品'
+  }
+  if (categoryLower.includes('通讯') || categoryLower.includes('电话') || categoryLower.includes('网络')) {
+    return '通讯费'
+  }
+  if (categoryLower.includes('快递') || categoryLower.includes('邮寄') || categoryLower.includes('物流')) {
+    return '快递费'
+  }
+
+  // Default to '其他' if no match
+  return '其他'
+}
+
+// Handle invoice selection
+const handleInvoiceSelected = (invoice: InvoiceBox) => {
+  selectedInvoice.value = invoice
+  showInvoiceSelector.value = false
+
+  // Auto-fill form data from invoice
+  formData.amount = invoice.totalAmount.toString()
+  formData.date = new Date(invoice.invoiceDate).toISOString().split('T')[0]
+  formData.hasInvoice = true
+
+  // Map invoice expense category to form category
+  if (invoice.expenseCategory) {
+    const mappedCategory = mapInvoiceCategoryToFormCategory(invoice.expenseCategory)
+    if (mappedCategory) {
+      formData.category = mappedCategory
+    }
+  }
+
+  // Auto-fill description with invoice info
+  const descriptionParts = []
+  if (invoice.buyerName) {
+    descriptionParts.push(`购买方: ${invoice.buyerName}`)
+  }
+  if (invoice.expenseCategory) {
+    descriptionParts.push(`项目: ${invoice.expenseCategory}`)
+  }
+  if (invoice.remark) {
+    descriptionParts.push(invoice.remark)
+  }
+
+  if (descriptionParts.length > 0 && !formData.description) {
+    formData.description = descriptionParts.join(' | ')
+  }
+}
+
+// Clear selected invoice
+const clearSelectedInvoice = () => {
+  selectedInvoice.value = null
+}
+
+// Format date for display
+const formatDate = (date: Date | string): string => {
+  const d = new Date(date)
+  return d.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
 const handleSubmit = () => {
   // Reset errors
   errors.amount = ''
@@ -173,7 +315,7 @@ const handleSubmit = () => {
     }
   }
 
-  emit('submit', {
+  const submitData: CreateExpenseItemInput = {
     amount: parseFloat(formData.amount),
     date: formData.date,
     category: formData.category as any,
@@ -181,6 +323,13 @@ const handleSubmit = () => {
     hasInvoice: formData.hasInvoice,
     departure: formData.departure.trim() || undefined,
     arrival: formData.arrival.trim() || undefined
-  })
+  }
+
+  // Include selected invoice ID if available
+  if (selectedInvoice.value) {
+    submitData.invoiceBoxIds = [selectedInvoice.value.id]
+  }
+
+  emit('submit', submitData)
 }
 </script>

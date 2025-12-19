@@ -68,6 +68,11 @@
               <p class="text-base text-gray-900">{{ invoice.buyerName }}</p>
             </div>
 
+            <div v-if="invoice.expenseCategory">
+              <p class="text-sm text-gray-500">费用项目</p>
+              <p class="text-base font-medium text-gray-900">{{ invoice.expenseCategory }}</p>
+            </div>
+
             <div v-if="invoice.remark">
               <p class="text-sm text-gray-500">备注</p>
               <p class="text-base text-gray-900 whitespace-pre-wrap">{{ invoice.remark }}</p>
