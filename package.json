@@ -16,6 +16,7 @@
     "mailparser": "^3.9.1",
     "nuxt": "^3.14.0",
     "pdf-to-img": "^5.0.0",
+    "pdfjs-dist": "^3.11.174",
     "tencentcloud-sdk-nodejs-ocr": "^4.1.155",
     "vue": "^3.5.0",
     "vue-router": "^4.5.0"

@@ -1,5 +1,5 @@
 <template>
-  <UiModal v-model="isOpen" title="打印预览" size="xl">
+  <UiModal v-model="isOpen" title="打印预览" size="xlarge">
     <div class="print-preview-container">
       <!-- 预览内容 -->
       <div id="print-content" class="print-content bg-white p-8 border border-gray-200 rounded-lg">
@@ -192,6 +192,52 @@
         </label>
       </div>
 
+      <!-- PDF 渲染进度提示 -->
+      <div v-if="isRenderingPdfs" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <h3 class="text-lg font-semibold text-gray-900">正在转换 PDF...</h3>
+          </div>
+
+          <div class="space-y-3">
+            <p class="text-sm text-gray-600">
+              正在将 PDF 发票转换为高清图片以确保打印质量
+            </p>
+
+            <!-- Progress bar -->
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                class="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
+                :style="{ width: `${(renderProgress.current / renderProgress.total) * 100}%` }"
+              ></div>
+            </div>
+            <p class="text-xs text-gray-500 text-center">
+              {{ renderProgress.current }} / {{ renderProgress.total }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF 渲染错误提示 -->
+      <div v-if="renderError" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <div class="flex-1">
+            <h4 class="text-sm font-medium text-red-800">PDF 转换失败</h4>
+            <p class="text-sm text-red-700 mt-1">{{ renderError }}</p>
+            <button
+              @click="renderError = null"
+              class="text-sm text-red-600 hover:text-red-800 mt-2 underline"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- 操作按钮 -->
       <div class="flex justify-end gap-3 mt-6">
         <UiButton variant="secondary" @click="handleClose">
@@ -208,6 +254,7 @@
 <script setup lang="ts">
 import type { Reimbursement } from '~/types/reimbursement'
 import { formatDate } from '~/utils/formatters'
+import { renderPdfPageToImage, PdfRenderError } from '~/utils/pdfRenderer'
 
 interface Props {
   modelValue: boolean
@@ -250,6 +297,14 @@ const editableData = ref<EditableData>({
 
 // 是否打印发票
 const includePrintInvoices = ref(true)
+
+// PDF 渲染状态
+const isRenderingPdfs = ref(false)
+const renderProgress = ref({ current: 0, total: 0 })
+const renderError = ref<string | null>(null)
+
+// 渲染缓存
+const renderedPdfImages = ref<Map<string, string>>(new Map())
 
 // 初始化明细项
 const initializeItems = () => {
@@ -423,7 +478,83 @@ const handleClose = () => {
   isOpen.value = false
 }
 
-const handlePrint = () => {
+/**
+ * Pre-render all PDF invoices to high-quality images
+ * This function is called before printing to convert PDFs to images
+ */
+const renderPdfInvoices = async (): Promise<Map<string, string>> => {
+  console.log('[PrintPreview] Starting PDF rendering process')
+
+  const pdfInvoices = invoiceImages.value.filter(inv => inv.isPdf)
+
+  if (pdfInvoices.length === 0) {
+    console.log('[PrintPreview] No PDFs to render')
+    return new Map()
+  }
+
+  isRenderingPdfs.value = true
+  renderProgress.value = { current: 0, total: pdfInvoices.length }
+  renderError.value = null
+
+  const imageCache = new Map<string, string>()
+
+  try {
+    for (let i = 0; i < pdfInvoices.length; i++) {
+      const invoice = pdfInvoices[i]
+      console.log(`[PrintPreview] Rendering PDF ${i + 1}/${pdfInvoices.length}: ${invoice.fileName}`)
+
+      try {
+        // Check if already cached
+        if (renderedPdfImages.value.has(invoice.url)) {
+          console.log(`[PrintPreview] Using cached image for ${invoice.fileName}`)
+          imageCache.set(invoice.url, renderedPdfImages.value.get(invoice.url)!)
+          renderProgress.value.current = i + 1
+          continue
+        }
+
+        // Render PDF to image at 300 DPI
+        const result = await renderPdfPageToImage(invoice.url, 1, {
+          dpi: 300,
+          format: 'image/png',
+          maxWidth: 3508, // A4 width at 300 DPI (210mm)
+          maxHeight: 4961  // A4 height at 300 DPI (297mm)
+        })
+
+        console.log(`[PrintPreview] Successfully rendered ${invoice.fileName}: ${result.width}x${result.height}px`)
+
+        // Cache the result
+        imageCache.set(invoice.url, result.dataUrl)
+        renderedPdfImages.value.set(invoice.url, result.dataUrl)
+
+        renderProgress.value.current = i + 1
+      } catch (error) {
+        console.error(`[PrintPreview] Failed to render ${invoice.fileName}:`, error)
+        if (error instanceof PdfRenderError) {
+          // Handle specific error types
+          if (error.code === 'LOAD_FAILED') {
+            throw new Error(`无法加载 PDF 文件: ${invoice.fileName}`)
+          } else if (error.code === 'MEMORY_ERROR') {
+            throw new Error(`PDF 文件过大，内存不足: ${invoice.fileName}`)
+          }
+        }
+
+        throw new Error(`渲染 PDF 失败: ${invoice.fileName}`)
+      }
+    }
+
+    console.log('[PrintPreview] All PDFs rendered successfully')
+    return imageCache
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '未知错误'
+    console.error('[PrintPreview] PDF rendering failed:', errorMessage)
+    renderError.value = errorMessage
+    throw error
+  } finally {
+    isRenderingPdfs.value = false
+  }
+}
+
+const handlePrint = async () => {
   console.log('[PrintPreview] 开始打印流程')
 
   // 打印指定区域（包括报销单和发票）
@@ -434,13 +565,38 @@ const handlePrint = () => {
   }
   console.log('[PrintPreview] 找到打印内容元素')
 
+  // 渲染 PDFs 到图片（如果需要）
+  let pdfImageCache: Map<string, string> | null = null
+  if (includePrintInvoices.value && invoiceImages.value.some(inv => inv.isPdf)) {
+    try {
+      console.log('[PrintPreview] 预渲染 PDFs 为图片')
+      pdfImageCache = await renderPdfInvoices()
+      console.log('[PrintPreview] PDF 渲染完成')
+    } catch (error) {
+      console.error('[PrintPreview] PDF 渲染失败:', error)
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+      const shouldContinue = confirm(
+        `PDF 转换失败: ${errorMsg}\n\n` +
+        `是否继续使用原始 PDF 打印？\n` +
+        `（注意：原始 PDF 打印质量可能不如转换后的图片）`
+      )
+
+      if (!shouldContinue) {
+        return // 取消打印
+      }
+      // 继续使用原始 iframe 方式作为降级方案
+    }
+  }
+
   // 关闭模态框以移除遮罩层，避免干扰打印对话框
   console.log('[PrintPreview] 关闭模态框')
   isOpen.value = false
 
   // 直接打开新窗口进行打印
+  // A4纸张尺寸: 210mm x 297mm
+  // 使用更高的DPI (150dpi) 来提高打印质量: 210mm * 150/25.4 ≈ 1240px, 297mm * 150/25.4 ≈ 1754px
   console.log('[PrintPreview] 打开新窗口')
-  const printWindow = window.open('', '_blank', 'width=800,height=600')
+  const printWindow = window.open('', '_blank', 'width=1240,height=1754')
   if (!printWindow) {
     console.error('[PrintPreview] 无法打开打印窗口，可能被浏览器阻止')
     alert('无法打开打印窗口，请检查浏览器是否阻止了弹出窗口')
@@ -464,27 +620,24 @@ const handlePrint = () => {
   let invoiceHtml = ''
   if (includePrintInvoices.value && invoiceImages.value.length > 0) {
     console.log(`[PrintPreview] 包含 ${invoiceImages.value.length} 张发票`)
-    // 生成发票 HTML
+
+    // 生成发票 HTML - 统一使用 img 标签
     const invoiceItems = invoiceImages.value.map((invoice, index) => {
-      if (invoice.isPdf) {
-        return `
-          <div class="invoice-item">
-            <iframe src="${invoice.url}#view=FitH&toolbar=0&navpanes=0&scrollbar=0"
-              class="invoice-pdf" title="发票 ${index + 1}"></iframe>
-          </div>
-        `
-      } else {
-        return `
-          <div class="invoice-item">
-            <img src="${invoice.url}" alt="发票 ${index + 1}" class="invoice-image" />
-          </div>
-        `
-      }
+      // 如果是 PDF 且已渲染，使用渲染后的图片
+      const imageUrl = invoice.isPdf && pdfImageCache?.has(invoice.url)
+        ? pdfImageCache.get(invoice.url)!
+        : invoice.url
+
+      return `
+        <div class="invoice-item">
+          <img src="${imageUrl}" alt="发票 ${index + 1}" class="invoice-image" />
+        </div>
+      `
     }).join('')
 
     invoiceHtml = `
+      <div class="page-break"></div>
       <div class="invoice-print-section">
-        <div class="page-break"></div>
         <div class="invoice-grid">
           ${invoiceItems}
         </div>
@@ -525,6 +678,15 @@ const handlePrint = () => {
             margin: 10mm;
           }
 
+          @page :first {
+            margin: 10mm;
+          }
+
+          @page invoice {
+            size: A4 portrait;
+            margin: 0;
+          }
+
           @media print {
             html, body {
               width: 100%;
@@ -542,6 +704,14 @@ const handlePrint = () => {
               max-width: 100%;
               transform: scale(1);
               transform-origin: top left;
+            }
+
+            /* 提高图片打印质量 */
+            img {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+              image-rendering: high-quality;
+              -ms-interpolation-mode: bicubic;
             }
 
             /* 隐藏输入框边框 */
@@ -570,8 +740,11 @@ const handlePrint = () => {
             /* 发票打印样式 */
             .invoice-print-section {
               page-break-before: always;
-              margin: 0 !important;
+              page: invoice;
               padding: 0 !important;
+              width: 100%;
+              max-width: 100%;
+              box-sizing: border-box;
             }
 
             .page-break {
@@ -582,41 +755,43 @@ const handlePrint = () => {
               display: flex;
               flex-direction: column;
               width: 100%;
-              gap: 2mm;
+              gap: 0;
               padding: 0;
               box-sizing: border-box;
             }
 
             .invoice-item {
-              display: flex;
-              align-items: center;
-              justify-content: center;
+              display: block;
               overflow: hidden;
               page-break-inside: avoid;
               padding: 0;
               margin: 0;
-              height: 47vh;
               width: 100%;
+              height: calc(50vh - 2px);
               box-sizing: border-box;
+              border-top: 1px dashed #d1d5db;
             }
 
-            /* 发票图片完整显示，同时限制宽度和高度 */
+            .invoice-item:first-child {
+              border-top: none;
+              height: calc(50vh - 3px);
+            }
+
+            /* 发票图片宽度占满，高度自适应 */
             .invoice-image {
-              max-width: 100%;
-              max-height: 100%;
-              width: auto;
-              height: auto;
-              object-fit: contain;
-              display: block;
-            }
-
-            .invoice-pdf {
               width: 100%;
-              height: 100%;
-              border: none;
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
+              height: auto;
+              max-width: 100%;
+              display: block;
+              object-fit: contain;
+              object-position: top center;
+              /* 使用高质量的图片渲染，避免模糊 */
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: high-quality;
+              -ms-interpolation-mode: bicubic;
+              /* 防止图片被过度压缩 */
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
             }
           }
 
@@ -625,6 +800,7 @@ const handlePrint = () => {
             body {
               padding: 20px;
               background: #f5f5f5;
+              overflow-x: hidden;
             }
 
             .print-content {
@@ -636,6 +812,7 @@ const handlePrint = () => {
             .invoice-print-section {
               max-width: 210mm;
               margin: 0 auto;
+              overflow: hidden;
             }
 
             .page-break {
@@ -647,7 +824,8 @@ const handlePrint = () => {
             .invoice-grid {
               display: flex;
               flex-direction: column;
-              gap: 20px;
+              gap: 0;
+              overflow: hidden;
             }
 
             .invoice-item {
@@ -660,7 +838,9 @@ const handlePrint = () => {
               padding: 0;
               background: white;
               min-height: 600px;
+              max-height: 600px;
               overflow: hidden;
+              position: relative;
             }
 
             .invoice-image {
@@ -669,12 +849,7 @@ const handlePrint = () => {
               width: auto;
               height: auto;
               object-fit: contain;
-            }
-
-            .invoice-pdf {
-              width: 100%;
-              height: 600px;
-              border: none;
+              display: block;
             }
           }
 
@@ -769,58 +944,7 @@ const handlePrint = () => {
       }
     }
 
-    if (iframes.length > 0) {
-      // 有 PDF iframe，监听加载完成
-      console.log('[PrintPreview] 检测到PDF iframe，等待加载完成')
-      let loadedCount = 0
-      const totalIframes = iframes.length
-      let hasStartedPrint = false
-
-      const checkIframeLoaded = () => {
-        loadedCount++
-        console.log('[PrintPreview] iframe 加载进度:', loadedCount + '/' + totalIframes)
-        if (loadedCount >= totalIframes && !hasStartedPrint) {
-          hasStartedPrint = true
-          console.log('[PrintPreview] 所有 iframe 加载完成，等待2秒后打印')
-          setTimeout(() => {
-            console.log('[PrintPreview] iframe 等待时间结束，开始打印')
-            doPrint()
-          }, 2000)
-        }
-      }
-
-      iframes.forEach((iframe) => {
-        // 监听 iframe 加载完成
-        iframe.addEventListener('load', () => {
-          console.log('[PrintPreview] iframe 加载成功')
-          checkIframeLoaded()
-        })
-        iframe.addEventListener('error', () => {
-          console.error('[PrintPreview] iframe 加载失败')
-          checkIframeLoaded()
-        })
-
-        // 如果 iframe 已经加载完成
-        try {
-          if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
-            console.log('[PrintPreview] iframe 已加载')
-            checkIframeLoaded()
-          }
-        } catch (e) {
-          // 跨域 iframe 无法访问 contentDocument，忽略错误
-          console.log('[PrintPreview] 无法访问 iframe contentDocument（可能是跨域）')
-        }
-      })
-
-      // 设置超时保护，最多等待 8 秒
-      setTimeout(() => {
-        if (!hasStartedPrint) {
-          hasStartedPrint = true
-          console.log('[PrintPreview] iframe 加载超时，强制开始打印')
-          doPrint()
-        }
-      }, 8000)
-    } else if (images.length > 0) {
+    if (images.length > 0) {
       // 有图片，等待图片加载
       console.log('[PrintPreview] 检测到图片，等待图片加载')
       let loadedCount = 0
@@ -869,6 +993,12 @@ const handlePrint = () => {
 watch(() => props.modelValue, (newValue) => {
   if (newValue) {
     initializeItems()
+  } else {
+    // 清理渲染状态
+    renderError.value = null
+    renderProgress.value = { current: 0, total: 0 }
+    // 保留缓存以提升性能，如需清理可取消注释下一行
+    // renderedPdfImages.value.clear()
   }
 })
 
