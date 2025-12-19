@@ -284,8 +284,13 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
   }
 
   // Generate remark for specific invoice types
-  // For train tickets: DateGetOn + " " + TimeGetOn + " " + TrainNumber + " " + StationGetOn + "->" + StationGetOff + " " + Seat
-  if (invoiceInfo.DateGetOn && invoiceInfo.StationGetOn && invoiceInfo.StationGetOff) {
+  // Priority 1: Use Name field if available (for all invoice types)
+  if (invoiceInfo.Name && invoiceInfo.Name.trim() !== '') {
+    result.remark = invoiceInfo.Name
+    console.log('[TENCENT-OCR] Remark (from Name field):', result.remark)
+  }
+  // Priority 2: For train tickets: DateGetOn + " " + TimeGetOn + " " + TrainNumber + " " + StationGetOn + "->" + StationGetOff + " " + Seat
+  else if (invoiceInfo.DateGetOn && invoiceInfo.StationGetOn && invoiceInfo.StationGetOff) {
     const remarkParts = []
       remarkParts.push("火车票：")
 
@@ -314,7 +319,7 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
     console.log('[TENCENT-OCR] Remark (Train):', result.remark)
   }
 
-  // For flight tickets: DateGetOn + " " + FlightNumber + " " + StationGetOn + "->" + StationGetOff
+  // Priority 3: For flight tickets: DateGetOn + " " + FlightNumber + " " + StationGetOn + "->" + StationGetOff
   else if (invoiceInfo.FlightNumber && invoiceInfo.StationGetOn && invoiceInfo.StationGetOff) {
     const remarkParts = []
 
@@ -331,13 +336,13 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
     console.log('[TENCENT-OCR] Remark (Flight):', result.remark)
   }
 
-  // For taxi tickets: Date + " " + Start + "->" + End
+  // Priority 4: For taxi tickets: Date + " " + Start + "->" + End
   else if (invoiceInfo.Date && invoiceInfo.Start && invoiceInfo.End) {
     result.remark = `${invoiceInfo.Date} ${invoiceInfo.Start}->${invoiceInfo.End}`
     console.log('[TENCENT-OCR] Remark (Taxi):', result.remark)
   }
 
-  // For electronic invoices: use Remark field or extract from VatElectronicItems
+  // Priority 5: For electronic invoices: use Remark field or extract from VatElectronicItems
   else if (invoiceInfo.Remark) {
     result.remark = invoiceInfo.Remark
     console.log('[TENCENT-OCR] Remark (from Remark field):', result.remark)

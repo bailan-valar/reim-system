@@ -96,32 +96,109 @@
               <p class="mt-2 text-sm text-gray-600">暂无关联的报销单</p>
             </div>
 
-            <div v-else class="divide-y divide-gray-200">
-              <div
-                v-for="reimbursement in company.reimbursements"
-                :key="reimbursement.id"
-                class="py-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                @click="navigateTo(`/reimbursements/${reimbursement.id}`)"
-              >
-                <div class="flex items-center justify-between">
-                  <div class="flex-1 min-w-0">
-                    <h4 class="text-sm font-medium text-gray-900 truncate">
-                      {{ reimbursement.title }}
-                    </h4>
-                    <p class="mt-1 text-sm text-gray-500">
-                      {{ formatDate(reimbursement.createdAt) }}
-                    </p>
-                  </div>
-                  <div class="flex items-center gap-4 ml-4">
-                    <span class="text-sm font-semibold text-gray-900">
-                      {{ formatCurrency(reimbursement.totalAmount) }}
-                    </span>
-                    <span class="text-sm text-primary-600 font-medium">
-                      查看 →
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('title')">
+                      <div class="flex items-center gap-1">
+                        标题
+                        <span v-if="sortBy === 'title'" class="text-primary-600">
+                          {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('type')">
+                      <div class="flex items-center gap-1">
+                        报销类型
+                        <span v-if="sortBy === 'type'" class="text-primary-600">
+                          {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('status')">
+                      <div class="flex items-center gap-1">
+                        状态
+                        <span v-if="sortBy === 'status'" class="text-primary-600">
+                          {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('totalAmount')">
+                      <div class="flex items-center gap-1">
+                        金额
+                        <span v-if="sortBy === 'totalAmount'" class="text-primary-600">
+                          {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('startDate')">
+                      <div class="flex items-center gap-1">
+                        报销时间
+                        <span v-if="sortBy === 'startDate'" class="text-primary-600">
+                          {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" @click="toggleSort('createdAt')">
+                      <div class="flex items-center gap-1">
+                        创建时间
+                        <span v-if="sortBy === 'createdAt'" class="text-primary-600">
+                          {{ sortOrder === 'asc' ? '↑' : '↓' }}
+                        </span>
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      操作
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr
+                    v-for="reimbursement in sortedReimbursements"
+                    :key="reimbursement.id"
+                    class="hover:bg-gray-50 transition-colors"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap cursor-pointer" @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+                      <div class="text-sm font-medium text-gray-900">
+                        {{ reimbursement.title }}
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap cursor-pointer" @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="getTypeClass(reimbursement.type)">
+                        {{ reimbursement.type }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap" @click.stop>
+                      <ReimbursementStatusBadgeDropdown
+                        :status="reimbursement.status"
+                        :reimbursement-id="reimbursement.id"
+                        @status-changed="handleStatusChanged"
+                      />
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap cursor-pointer" @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+                      <div class="text-sm font-semibold text-gray-900">
+                        {{ formatCurrency(reimbursement.totalAmount) }}
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap cursor-pointer" @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+                      <div class="text-sm text-gray-500">
+                        {{ formatDate(reimbursement.startDate) }}
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap cursor-pointer" @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+                      <div class="text-sm text-gray-500">
+                        {{ formatDate(reimbursement.createdAt) }}
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium cursor-pointer" @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+                      <span class="text-primary-600 hover:text-primary-900">
+                        查看详情
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </UiCard>
@@ -149,6 +226,7 @@
 
 <script setup lang="ts">
 import type { CompanyWithDetails, UpdateCompanyInput } from '~/types/company'
+import type { Reimbursement } from '~/types/reimbursement'
 import { formatCurrency, formatDateTime, formatDate } from '~/utils/formatters'
 
 const route = useRoute()
@@ -158,6 +236,10 @@ const loading = ref(true)
 const submitting = ref(false)
 const company = ref<CompanyWithDetails | null>(null)
 const showEditModal = ref(false)
+
+// Sorting state
+const sortBy = ref<'title' | 'type' | 'status' | 'totalAmount' | 'startDate' | 'createdAt'>('createdAt')
+const sortOrder = ref<'asc' | 'desc'>('desc')
 
 const loadCompany = async () => {
   loading.value = true
@@ -208,6 +290,109 @@ const handleDelete = async () => {
     console.error('Failed to delete company:', error)
     alert(error.message || '删除公司失败')
   }
+}
+
+const getStatusClass = (status: string) => {
+  const statusClasses: Record<string, string> = {
+    '待整理': 'bg-gray-100 text-gray-800',
+    '待打印单据': 'bg-blue-100 text-blue-800',
+    '待审批': 'bg-yellow-100 text-yellow-800',
+    '待打款': 'bg-purple-100 text-purple-800',
+    '已完成': 'bg-green-100 text-green-800',
+  }
+  return statusClasses[status] || 'bg-gray-100 text-gray-800'
+}
+
+const getTypeClass = (type: string) => {
+  const typeClasses: Record<string, string> = {
+    '现金报销': 'bg-indigo-100 text-indigo-800',
+    '差旅费报销': 'bg-cyan-100 text-cyan-800',
+  }
+  return typeClasses[type] || 'bg-gray-100 text-gray-800'
+}
+
+// Format reimbursement period
+const formatReimbursementPeriod = (startDate?: Date | string | null, endDate?: Date | string | null) => {
+  if (!startDate && !endDate) {
+    return '-'
+  }
+
+  const start = startDate ? formatDate(startDate) : ''
+  const end = endDate ? formatDate(endDate) : ''
+
+  if (start && end) {
+    return `${start} ~ ${end}`
+  }
+
+  return start || end
+}
+
+// Sorting logic
+const sortedReimbursements = computed(() => {
+  if (!company.value?.reimbursements) return []
+
+  const reimbursements = [...company.value.reimbursements]
+
+  return reimbursements.sort((a, b) => {
+    let aValue: any
+    let bValue: any
+
+    switch (sortBy.value) {
+      case 'title':
+        aValue = a.title.toLowerCase()
+        bValue = b.title.toLowerCase()
+        break
+      case 'type':
+        aValue = a.type
+        bValue = b.type
+        break
+      case 'status':
+        // 定义状态的排序优先级
+        const statusOrder: Record<string, number> = {
+          '待整理': 1,
+          '待打印单据': 2,
+          '待审批': 3,
+          '待打款': 4,
+          '已完成': 5,
+        }
+        aValue = statusOrder[a.status] || 999
+        bValue = statusOrder[b.status] || 999
+        break
+      case 'totalAmount':
+        aValue = a.totalAmount
+        bValue = b.totalAmount
+        break
+      case 'startDate':
+        aValue = a.startDate ? new Date(a.startDate).getTime() : 0
+        bValue = b.startDate ? new Date(b.startDate).getTime() : 0
+        break
+      case 'createdAt':
+        aValue = new Date(a.createdAt).getTime()
+        bValue = new Date(b.createdAt).getTime()
+        break
+      default:
+        return 0
+    }
+
+    if (aValue < bValue) return sortOrder.value === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortOrder.value === 'asc' ? 1 : -1
+    return 0
+  })
+})
+
+// Toggle sort
+const toggleSort = (field: 'title' | 'type' | 'status' | 'totalAmount' | 'startDate' | 'createdAt') => {
+  if (sortBy.value === field) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = field
+    sortOrder.value = 'desc'
+  }
+}
+
+// Handle status change
+const handleStatusChanged = async () => {
+  await loadCompany()
 }
 
 onMounted(() => {

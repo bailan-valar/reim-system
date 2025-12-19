@@ -1,6 +1,10 @@
 import type { ExpenseItem } from './expenseItem'
 import type { Company } from './company'
 
+export type ReimbursementType =
+  | '现金报销'
+  | '差旅费报销'
+
 export type ReimbursementStatus =
   | '待整理'
   | '待打印单据'
@@ -12,6 +16,7 @@ export interface Reimbursement {
   id: string
   title: string
   description?: string | null
+  type: ReimbursementType
   status: ReimbursementStatus
   totalAmount: number
   startDate?: Date | string | null
@@ -26,6 +31,7 @@ export interface Reimbursement {
 export interface CreateReimbursementInput {
   title: string
   description?: string
+  type?: ReimbursementType
   status?: ReimbursementStatus
   startDate?: string
   endDate?: string
@@ -35,6 +41,7 @@ export interface CreateReimbursementInput {
 export interface UpdateReimbursementInput {
   title?: string
   description?: string
+  type?: ReimbursementType
   status?: ReimbursementStatus
   startDate?: string | null
   endDate?: string | null

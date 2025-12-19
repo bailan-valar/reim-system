@@ -1,5 +1,5 @@
 <template>
-  <UiCard hover @click="navigateTo(`/reimbursements/${reimbursement.id}`)">
+  <UiCard hover @click="handleCardClick">
     <div class="space-y-3">
       <!-- Header -->
       <div class="flex items-start justify-between">
@@ -11,7 +11,11 @@
             {{ reimbursement.description }}
           </p>
         </div>
-        <ReimbursementStatusBadge :status="reimbursement.status" />
+        <ReimbursementStatusBadgeDropdown
+          :status="reimbursement.status"
+          :reimbursement-id="reimbursement.id"
+          @status-changed="handleStatusChanged"
+        />
       </div>
 
       <!-- Date Range and Company -->
@@ -80,6 +84,18 @@ const props = defineProps<{
   reimbursement: Reimbursement
 }>()
 
+const emit = defineEmits<{
+  statusChanged: []
+}>()
+
 const itemCount = computed(() => props.reimbursement.items?.length || 0)
 const invoiceCount = computed(() => props.reimbursement.items?.filter(item => item.hasInvoice).length || 0)
+
+const handleCardClick = () => {
+  navigateTo(`/reimbursements/${props.reimbursement.id}`)
+}
+
+const handleStatusChanged = () => {
+  emit('statusChanged')
+}
 </script>

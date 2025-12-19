@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, 'id')
     const body = await readBody(event)
-    const { title, description, status, startDate, endDate, companyId } = body
+    const { title, description, type, status, startDate, endDate, companyId } = body
 
     if (!id) {
       throw createError({
@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
     const updateData: any = {}
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
+    if (type !== undefined) updateData.type = type
     if (status !== undefined) updateData.status = status
 
     // Handle date range updates

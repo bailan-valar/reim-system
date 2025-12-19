@@ -21,8 +21,10 @@ export default defineEventHandler(async (event) => {
           select: {
             id: true,
             title: true,
+            type: true,
             totalAmount: true,
             status: true,
+            startDate: true,
             createdAt: true
           },
           orderBy: {

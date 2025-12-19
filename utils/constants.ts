@@ -1,3 +1,11 @@
+// Reimbursement type constants
+export const REIMBURSEMENT_TYPES = [
+  '现金报销',
+  '差旅费报销'
+] as const
+
+export type ReimbursementType = typeof REIMBURSEMENT_TYPES[number]
+
 // Reimbursement status constants
 export const REIMBURSEMENT_STATUSES = [
   '待整理',
@@ -11,10 +19,13 @@ export type ReimbursementStatus = typeof REIMBURSEMENT_STATUSES[number]
 
 // Expense category constants
 export const EXPENSE_CATEGORIES = [
-  '交通',
+  '火车',
+  '打车',
+  '飞机',
   '餐饮',
   '住宿',
   '办公',
+  '云服务',
   '其他'
 ] as const
 

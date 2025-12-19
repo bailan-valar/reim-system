@@ -3,27 +3,29 @@
     <div class="print-preview-container">
       <!-- 预览内容 -->
       <div id="print-content" class="print-content bg-white p-8 border border-gray-200 rounded-lg">
-        <!-- 公司名称 -->
-        <div class="company-header flex items-center justify-between text-xl font-bold mb-1">
-          <!-- 公司 Logo -->
-          <img v-if="companyLogo" :src="companyLogo" alt="公司Logo" class="company-logo" />
-          <input v-model="editableData.companyName" type="text"
-            class="flex-1 text-center border-b border-gray-300 focus:border-primary-500 outline-none" />
-          <div v-if="companyLogo" class="company-logo-placeholder" style="width: 120px; height: 60px;"></div>
-        </div>
+        <!-- 现金报销单模板 -->
+        <div v-if="reimbursement.type === '现金报销'">
+          <!-- 公司名称 -->
+          <div class="company-header flex items-center justify-between text-xl font-bold mb-1">
+            <!-- 公司 Logo -->
+            <img v-if="companyLogo && includePrintLogo" :src="companyLogo" alt="公司Logo" class="company-logo" />
+            <input v-model="editableData.companyName" type="text"
+              class="flex-1 text-center border-b border-gray-300 focus:border-primary-500 outline-none" />
+            <div v-if="companyLogo && includePrintLogo" class="company-logo-placeholder" style="width: 120px; height: 60px;"></div>
+          </div>
 
-        <!-- 部门和标题 -->
-        <div class="title-row flex justify-between items-center mb-1">
-          <div class="department flex items-center gap-2">
-            <span>部门：</span>
-            <input v-model="editableData.department" type="text"
-              class="border-b border-gray-300 focus:border-primary-500 outline-none w-32" />
+          <!-- 部门和标题 -->
+          <div class="title-row flex justify-between items-center mb-1">
+            <div class="department flex items-center gap-2">
+              <span>部门：</span>
+              <input v-model="editableData.department" type="text"
+                class="border-b border-gray-300 focus:border-primary-500 outline-none w-32" />
+            </div>
+            <div class="main-title text-2xl font-bold tracking-widest">
+              现 金 报 销 单
+            </div>
+            <div class="w-32"></div>
           </div>
-          <div class="main-title text-2xl font-bold tracking-widest">
-            现 金 报 销 单
-          </div>
-          <div class="w-32"></div>
-        </div>
 
         <!-- 表格和附件区域的容器 -->
         <div class="table-with-attachment flex">
@@ -166,29 +168,51 @@
           </div>
         </div>
 
-        <!-- 报销日期 -->
-        <div class="footer-date text-right">
-          <span>报销日期：</span>
-          <input v-model="editableData.reimbursementDate" type="text"
-            class="border-b border-gray-300 focus:border-primary-500 outline-none w-36" />
-        </div>
+          <!-- 报销日期 -->
+          <div class="footer-date text-right">
+            <span>报销日期：</span>
+            <input v-model="editableData.reimbursementDate" type="text"
+              class="border-b border-gray-300 focus:border-primary-500 outline-none w-36" />
+          </div>
 
-        <!-- 裁剪分割线 -->
-        <div class="cut-line-container">
-          <div class="cut-line">
-            <div class="cut-line-dashed"></div>
+          <!-- 裁剪分割线 -->
+          <div class="cut-line-container">
+            <div class="cut-line">
+              <div class="cut-line-dashed"></div>
+            </div>
           </div>
         </div>
+
+        <!-- 差旅费报销单模板 -->
+        <TravelExpensePrintTemplate
+          v-else-if="reimbursement.type === '差旅费报销'"
+          :reimbursement="reimbursement"
+          :company-logo="companyLogo"
+          :include-print-logo="includePrintLogo"
+        />
       </div>
 
-      <!-- 发票打印选项 -->
-      <div v-if="invoiceImages.length > 0" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input v-model="includePrintInvoices" type="checkbox" class="w-4 h-4 text-primary-600 rounded" />
-          <span class="text-sm font-medium text-gray-700">
-            同时打印发票（共 {{ invoiceImages.length }} 张）
-          </span>
-        </label>
+      <!-- 打印选项 -->
+      <div class="mt-6 space-y-3">
+        <!-- Logo 打印选项 -->
+        <div v-if="companyLogo" class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="includePrintLogo" type="checkbox" class="w-4 h-4 text-primary-600 rounded" />
+            <span class="text-sm font-medium text-gray-700">
+              打印公司 Logo
+            </span>
+          </label>
+        </div>
+
+        <!-- 发票打印选项 -->
+        <div v-if="invoiceImages.length > 0" class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="includePrintInvoices" type="checkbox" class="w-4 h-4 text-primary-600 rounded" />
+            <span class="text-sm font-medium text-gray-700">
+              同时打印发票（共 {{ invoiceImages.length }} 张）
+            </span>
+          </label>
+        </div>
       </div>
 
       <!-- PDF 渲染进度提示 -->
@@ -254,6 +278,7 @@
 import type { Reimbursement } from '~/types/reimbursement'
 import { formatDate } from '~/utils/formatters'
 import { renderPdfPageToImage, PdfRenderError } from '~/utils/pdfRenderer'
+import TravelExpensePrintTemplate from './TravelExpensePrintTemplate.vue'
 
 interface Props {
   modelValue: boolean
@@ -301,6 +326,9 @@ const editableData = ref<EditableData>({
 
 // 是否打印发票
 const includePrintInvoices = ref(true)
+
+// 是否打印 Logo
+const includePrintLogo = ref(true)
 
 // PDF 渲染状态
 const isRenderingPdfs = ref(false)
@@ -666,11 +694,13 @@ const handlePrint = async () => {
     .join('\n')
   console.log('[PrintPreview] 样式获取完成')
 
+  const printTitle = props.reimbursement.type === '差旅费报销' ? '出差旅费报销单' : '现金报销单'
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
       <head>
-        <title>现金报销单</title>
+        <title>${printTitle}</title>
         <meta charset="UTF-8">
         <style>
           /* 引入页面的所有样式 */

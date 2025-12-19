@@ -37,6 +37,7 @@
         :reimbursements="reimbursements"
         :loading="loading"
         @filter="handleFilter"
+        @reload="handleReload"
       />
     </main>
 
@@ -82,6 +83,10 @@ const loadReimbursements = async (status?: string, companyId?: string, sortBy?: 
 
 const handleFilter = (status: string, companyId: string, sortBy: string, order: string) => {
   loadReimbursements(status, companyId, sortBy, order)
+}
+
+const handleReload = () => {
+  loadReimbursements()
 }
 
 onMounted(() => {

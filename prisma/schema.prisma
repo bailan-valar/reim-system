@@ -25,6 +25,7 @@ model Reimbursement {
   id          String    @id @default(uuid())
   title       String
   description String?
+  type        String    @default("现金报销") // 现金报销, 差旅费报销
   status      String    @default("待整理") // 待整理, 待打印单据, 待审批, 待打款, 已完成
   totalAmount Float     @default(0)
   startDate   DateTime? // 开始日期
@@ -46,8 +47,10 @@ model ExpenseItem {
   amount          Float         // 用户定义的费用金额
   date            DateTime
   description     String?
-  category        String        // 交通, 餐饮, 住宿, 办公, 其他
+  category        String        // 火车, 打车, 飞机, 餐饮, 住宿, 办公, 云服务, 其他
   hasInvoice      Boolean       @default(false) // 是否已开票
+  departure       String?       // 出发地（火车/飞机时必填）
+  arrival         String?       // 到达地（火车/飞机时必填）
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

@@ -47,6 +47,7 @@
         v-for="reimbursement in reimbursements"
         :key="reimbursement.id"
         :reimbursement="reimbursement"
+        @status-changed="handleStatusChanged"
       />
     </div>
   </div>
@@ -64,6 +65,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   filter: [status: string, companyId: string, sortBy: string, order: string]
+  reload: []
 }>()
 
 const { fetchCompanies } = useCompanies()
@@ -98,6 +100,10 @@ const sortOptions = [
   { value: 'totalAmount-desc', label: '金额 (高到低)' },
   { value: 'totalAmount-asc', label: '金额 (低到高)' }
 ]
+
+const handleStatusChanged = () => {
+  emit('reload')
+}
 
 watch([selectedStatus, selectedCompany, sortBy], () => {
   const [field, order] = sortBy.value.split('-')

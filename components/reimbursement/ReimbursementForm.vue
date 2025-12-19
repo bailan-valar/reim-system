@@ -18,6 +18,13 @@
       />
     </div>
 
+    <UiSelect
+      v-model="formData.type"
+      label="报销类型"
+      :options="typeOptions"
+      required
+    />
+
     <!-- Date Range Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <UiInput
@@ -72,7 +79,7 @@
 
 <script setup lang="ts">
 import type { Reimbursement, CreateReimbursementInput } from '~/types/reimbursement'
-import { REIMBURSEMENT_STATUSES } from '~/utils/constants'
+import { REIMBURSEMENT_STATUSES, REIMBURSEMENT_TYPES } from '~/utils/constants'
 
 const props = defineProps<{
   reimbursement?: Reimbursement
@@ -94,6 +101,7 @@ const formatDateForInput = (date: Date | string | null | undefined): string => {
 const formData = reactive({
   title: props.reimbursement?.title || '',
   description: props.reimbursement?.description || '',
+  type: props.reimbursement?.type || '现金报销',
   status: props.reimbursement?.status || '待整理',
   startDate: formatDateForInput(props.reimbursement?.startDate),
   endDate: formatDateForInput(props.reimbursement?.endDate),
@@ -106,6 +114,11 @@ const errors = reactive({
   endDate: '',
   companyId: ''
 })
+
+const typeOptions = REIMBURSEMENT_TYPES.map(type => ({
+  value: type,
+  label: type
+}))
 
 const statusOptions = REIMBURSEMENT_STATUSES.map(status => ({
   value: status,
@@ -139,6 +152,7 @@ const handleSubmit = () => {
   emit('submit', {
     title: formData.title.trim(),
     description: formData.description.trim() || undefined,
+    type: formData.type as any,
     status: formData.status as any,
     startDate: formData.startDate || undefined,
     endDate: formData.endDate || undefined,

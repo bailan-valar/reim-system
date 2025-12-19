@@ -21,6 +21,9 @@
           <p class="text-sm text-gray-600">
             {{ formatDate(item.date) }}
           </p>
+          <p v-if="item.departure && item.arrival" class="text-sm text-gray-600">
+            {{ item.departure }} → {{ item.arrival }}
+          </p>
           <p v-if="totalInvoiceAmount > 0" class="text-sm text-gray-500">
             发票总额: {{ formatCurrency(totalInvoiceAmount) }}
           </p>

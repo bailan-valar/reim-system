@@ -7,8 +7,10 @@ export function formatCurrency(amount: number): string {
 }
 
 // Format date
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return '-'
   const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) return '-'
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: '2-digit',

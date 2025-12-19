@@ -43,7 +43,11 @@
                   {{ reimbursement.description }}
                 </p>
               </div>
-              <ReimbursementStatusBadge :status="reimbursement.status" />
+              <ReimbursementStatusBadgeDropdown
+                :status="reimbursement.status"
+                :reimbursement-id="reimbursement.id"
+                @status-changed="handleStatusChanged"
+              />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-200">
@@ -228,6 +232,10 @@ const handleUpdate = async (data: UpdateReimbursementInput) => {
   } finally {
     updating.value = false
   }
+}
+
+const handleStatusChanged = async () => {
+  await loadReimbursement()
 }
 
 const handlePrint = () => {

@@ -1,8 +1,11 @@
 export type ExpenseCategory =
-  | '交通'
+  | '火车'
+  | '打车'
+  | '飞机'
   | '餐饮'
   | '住宿'
   | '办公'
+  | '云服务'
   | '其他'
 
 import type { InvoiceBox } from './invoiceBox'
@@ -15,6 +18,8 @@ export interface ExpenseItem {
   description?: string | null
   category: ExpenseCategory
   hasInvoice: boolean
+  departure?: string | null
+  arrival?: string | null
   invoiceBoxes?: InvoiceBox[]
   createdAt: Date | string
   updatedAt: Date | string
@@ -26,6 +31,8 @@ export interface CreateExpenseItemInput {
   description?: string
   category: ExpenseCategory
   hasInvoice?: boolean
+  departure?: string
+  arrival?: string
 }
 
 export interface UpdateExpenseItemInput {
@@ -34,4 +41,6 @@ export interface UpdateExpenseItemInput {
   description?: string
   category?: ExpenseCategory
   hasInvoice?: boolean
+  departure?: string
+  arrival?: string
 }

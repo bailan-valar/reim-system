@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
     const id = getRouterParam(event, 'id')
     const itemId = getRouterParam(event, 'itemId')
     const body = await readBody(event)
-    const { amount, date, description, category, hasInvoice } = body
+    const { amount, date, description, category, hasInvoice, departure, arrival } = body
 
     if (!id || !itemId) {
       throw createError({
@@ -20,6 +20,21 @@ export default defineEventHandler(async (event) => {
     if (description !== undefined) updateData.description = description
     if (category !== undefined) updateData.category = category
     if (hasInvoice !== undefined) updateData.hasInvoice = hasInvoice
+    if (departure !== undefined) updateData.departure = departure || null
+    if (arrival !== undefined) updateData.arrival = arrival || null
+
+    // Validate departure and arrival for train/plane categories
+    const finalCategory = category !== undefined ? category : (await prisma.expenseItem.findUnique({ where: { id: itemId } }))?.category
+    if (finalCategory === '火车' || finalCategory === '飞机') {
+      const finalDeparture = departure !== undefined ? departure : (await prisma.expenseItem.findUnique({ where: { id: itemId } }))?.departure
+      const finalArrival = arrival !== undefined ? arrival : (await prisma.expenseItem.findUnique({ where: { id: itemId } }))?.arrival
+      if (!finalDeparture || !finalArrival) {
+        throw createError({
+          statusCode: 400,
+          message: '火车和飞机类型必须填写出发地和到达地'
+        })
+      }
+    }
 
     // Update expense item
     const item = await prisma.expenseItem.update({

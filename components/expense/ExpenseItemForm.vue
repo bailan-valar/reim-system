@@ -26,6 +26,24 @@
       :error="errors.category"
     />
 
+    <!-- Departure and Arrival fields for train/plane -->
+    <div v-if="showTravelFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <UiInput
+        v-model="formData.departure"
+        label="出发地"
+        placeholder="请输入出发地"
+        required
+        :error="errors.departure"
+      />
+      <UiInput
+        v-model="formData.arrival"
+        label="到达地"
+        placeholder="请输入到达地"
+        required
+        :error="errors.arrival"
+      />
+    </div>
+
     <div>
       <label class="flex items-center gap-2 cursor-pointer">
         <input
@@ -96,13 +114,22 @@ const formData = reactive({
   date: getDefaultDate(),
   category: props.item?.category || '',
   description: props.item?.description || '',
-  hasInvoice: props.item?.hasInvoice || false
+  hasInvoice: props.item?.hasInvoice || false,
+  departure: props.item?.departure || '',
+  arrival: props.item?.arrival || ''
 })
 
 const errors = reactive({
   amount: '',
   date: '',
-  category: ''
+  category: '',
+  departure: '',
+  arrival: ''
+})
+
+// Computed property to show/hide travel fields
+const showTravelFields = computed(() => {
+  return formData.category === '火车' || formData.category === '飞机'
 })
 
 const categoryOptions = EXPENSE_CATEGORIES.map(category => ({
@@ -115,6 +142,8 @@ const handleSubmit = () => {
   errors.amount = ''
   errors.date = ''
   errors.category = ''
+  errors.departure = ''
+  errors.arrival = ''
 
   // Validate
   if (!formData.amount || parseFloat(formData.amount) <= 0) {
@@ -132,12 +161,26 @@ const handleSubmit = () => {
     return
   }
 
+  // Validate departure and arrival for train/plane
+  if (formData.category === '火车' || formData.category === '飞机') {
+    if (!formData.departure.trim()) {
+      errors.departure = '请输入出发地'
+      return
+    }
+    if (!formData.arrival.trim()) {
+      errors.arrival = '请输入到达地'
+      return
+    }
+  }
+
   emit('submit', {
     amount: parseFloat(formData.amount),
     date: formData.date,
     category: formData.category as any,
     description: formData.description.trim() || undefined,
-    hasInvoice: formData.hasInvoice
+    hasInvoice: formData.hasInvoice,
+    departure: formData.departure.trim() || undefined,
+    arrival: formData.arrival.trim() || undefined
   })
 }
 </script>

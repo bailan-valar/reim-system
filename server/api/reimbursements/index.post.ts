@@ -3,7 +3,7 @@ import prisma from '~/server/utils/prisma'
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { title, description, status, startDate, endDate, companyId } = body
+    const { title, description, type, status, startDate, endDate, companyId } = body
 
     if (!title) {
       throw createError({
@@ -41,6 +41,7 @@ export default defineEventHandler(async (event) => {
       data: {
         title,
         description: description || null,
+        type: type || '现金报销',
         status: status || '待整理',
         totalAmount: 0,
         startDate: startDate ? new Date(startDate) : null,

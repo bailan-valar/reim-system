@@ -53,6 +53,15 @@
               <option value="增值税电子专用发票">增值税电子专用发票</option>
               <option value="其他">其他</option>
             </select>
+            <select
+              v-model="selectedBuyer"
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+            >
+              <option value="">全部购买方</option>
+              <option v-for="buyer in buyerList" :key="buyer" :value="buyer">
+                {{ buyer }}
+              </option>
+            </select>
             <button
               @click="showUploadModal = true"
               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
@@ -141,6 +150,11 @@
                 <p class="text-xs text-gray-500">购买方</p>
                 <p class="text-sm text-gray-700 truncate" :title="invoice.buyerName">{{ invoice.buyerName }}</p>
               </div>
+
+              <div v-if="invoice.remark">
+                <p class="text-xs text-gray-500">备注</p>
+                <p class="text-sm text-gray-700 line-clamp-2" :title="invoice.remark">{{ invoice.remark }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -212,6 +226,7 @@ const viewingInvoice = ref<InvoiceBox | null>(null)
 const showUploadModal = ref(false)
 const searchQuery = ref('')
 const selectedType = ref('')
+const selectedBuyer = ref('')
 const amountFilterEnabled = ref(false)
 const amountTolerance = ref(0.05) // Default 5% tolerance
 
@@ -235,6 +250,14 @@ async function loadInvoices() {
     loading.value = false
   }
 }
+
+// Get unique buyer list from invoices
+const buyerList = computed(() => {
+  const buyers = invoices.value
+    .map(invoice => invoice.buyerName)
+    .filter((buyer): buyer is string => !!buyer)
+  return [...new Set(buyers)].sort()
+})
 
 // Calculate amount range based on tolerance
 const minAmount = computed(() => {
@@ -308,6 +331,11 @@ const filteredInvoices = computed(() => {
   // Filter by type
   if (selectedType.value) {
     result = result.filter(invoice => invoice.invoiceType === selectedType.value)
+  }
+
+  // Filter by buyer
+  if (selectedBuyer.value) {
+    result = result.filter(invoice => invoice.buyerName === selectedBuyer.value)
   }
 
   // Filter by amount (when checkbox is enabled)
