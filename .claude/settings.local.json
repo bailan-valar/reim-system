@@ -68,7 +68,9 @@
       "Bash(timeout /t 5)",
       "Bash(del \"d:\\\\Workspace\\\\canger\\\\reim-system\\\\read_excel.py\")",
       "Bash(powershell -Command:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(node test-pdf-to-image.js:*)"
     ],
     "deny": [],
     "ask": []

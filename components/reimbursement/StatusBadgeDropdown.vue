@@ -40,9 +40,9 @@
     >
       <div
         v-if="isOpen"
-        class="absolute left-0 mt-2 w-auto min-w-[140px] rounded-lg shadow-xl bg-white ring-1 ring-gray-200 z-50"
+        class="absolute left-1/2 -translate-x-1/2 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 z-[100]"
       >
-        <div class="py-2 px-1" role="menu">
+        <div class="py-2 px-1 flex flex-col" role="menu">
           <button
             v-for="statusOption in REIMBURSEMENT_STATUSES"
             :key="statusOption"
