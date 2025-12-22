@@ -9,6 +9,10 @@ import * as pdfjsLib from 'pdfjs-dist'
 // The worker URL needs to be set to use PDF.js in the browser
 const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
 
+// Configure CMap and standard fonts URLs for proper Chinese character rendering
+const CMAP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/'
+const STANDARD_FONT_DATA_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/'
+
 // Initialize PDF.js worker
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL
@@ -91,8 +95,13 @@ export async function renderPdfPageToImage(
   } = options
 
   try {
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument(pdfUrl)
+    // Load the PDF document with CMap configuration for Chinese character support
+    const loadingTask = pdfjsLib.getDocument({
+      url: pdfUrl,
+      cMapUrl: CMAP_URL,
+      cMapPacked: true,
+      standardFontDataUrl: STANDARD_FONT_DATA_URL
+    })
     const pdf = await loadingTask.promise
 
     // Validate page number
@@ -225,8 +234,13 @@ export async function renderPdfToImages(
   onProgress?: (current: number, total: number) => void
 ): Promise<PdfRenderResult[]> {
   try {
-    // First, load PDF to get page count
-    const loadingTask = pdfjsLib.getDocument(pdfUrl)
+    // First, load PDF to get page count with CMap configuration
+    const loadingTask = pdfjsLib.getDocument({
+      url: pdfUrl,
+      cMapUrl: CMAP_URL,
+      cMapPacked: true,
+      standardFontDataUrl: STANDARD_FONT_DATA_URL
+    })
     const pdf = await loadingTask.promise
     const totalPages = pdf.numPages
 

@@ -277,7 +277,6 @@
 <script setup lang="ts">
 import type { Reimbursement } from '~/types/reimbursement'
 import { formatDate } from '~/utils/formatters'
-import { renderPdfPageToImage, PdfRenderError } from '~/utils/pdfRenderer'
 import TravelExpensePrintTemplate from './TravelExpensePrintTemplate.vue'
 
 interface Props {
@@ -511,11 +510,11 @@ const handleClose = () => {
 }
 
 /**
- * Pre-render all PDF invoices to high-quality images
+ * Pre-render all PDF invoices to high-quality images using server-side conversion
  * This function is called before printing to convert PDFs to images
  */
 const renderPdfInvoices = async (): Promise<Map<string, string>> => {
-  console.log('[PrintPreview] Starting PDF rendering process')
+  console.log('[PrintPreview] Starting PDF rendering process (server-side)')
 
   const pdfInvoices = invoiceImages.value.filter(inv => inv.isPdf)
 
@@ -544,30 +543,37 @@ const renderPdfInvoices = async (): Promise<Map<string, string>> => {
           continue
         }
 
-        // Render PDF to image at 300 DPI
-        const result = await renderPdfPageToImage(invoice.url, 1, {
-          dpi: 300,
-          format: 'image/png',
-          maxWidth: 3508, // A4 width at 300 DPI (210mm)
-          maxHeight: 4961  // A4 height at 300 DPI (297mm)
+        // Call server-side API to convert PDF to image
+        const response = await $fetch('/api/pdf/convert-to-image', {
+          method: 'POST',
+          body: {
+            pdfPath: invoice.url,
+            pageNumber: 1,
+            scale: 2.0, // High quality scale
+            width: 1754, // A4 width at 150 DPI (210mm * 150/25.4)
+            height: 2480  // A4 height at 150 DPI (297mm * 150/25.4)
+          }
         })
 
-        console.log(`[PrintPreview] Successfully rendered ${invoice.fileName}: ${result.width}x${result.height}px`)
+        if (!response.success || !response.data) {
+          throw new Error('服务器返回无效响应')
+        }
+
+        console.log(`[PrintPreview] Successfully rendered ${invoice.fileName}: ${response.data.width}x${response.data.height}px`)
 
         // Cache the result
-        imageCache.set(invoice.url, result.dataUrl)
-        renderedPdfImages.value.set(invoice.url, result.dataUrl)
+        imageCache.set(invoice.url, response.data.dataUrl)
+        renderedPdfImages.value.set(invoice.url, response.data.dataUrl)
 
         renderProgress.value.current = i + 1
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[PrintPreview] Failed to render ${invoice.fileName}:`, error)
-        if (error instanceof PdfRenderError) {
-          // Handle specific error types
-          if (error.code === 'LOAD_FAILED') {
-            throw new Error(`无法加载 PDF 文件: ${invoice.fileName}`)
-          } else if (error.code === 'MEMORY_ERROR') {
-            throw new Error(`PDF 文件过大，内存不足: ${invoice.fileName}`)
-          }
+
+        // Handle specific error types
+        if (error.data?.code === 'FILE_NOT_FOUND') {
+          throw new Error(`无法找到 PDF 文件: ${invoice.fileName}`)
+        } else if (error.data?.code === 'MEMORY_ERROR') {
+          throw new Error(`PDF 文件过大，内存不足: ${invoice.fileName}`)
         }
 
         throw new Error(`渲染 PDF 失败: ${invoice.fileName}`)
@@ -597,34 +603,7 @@ const handlePrint = async () => {
   }
   console.log('[PrintPreview] 找到打印内容元素')
 
-  // 渲染 PDFs 到图片（如果需要）
-  let pdfImageCache: Map<string, string> | null = null
-  if (includePrintInvoices.value && invoiceImages.value.some(inv => inv.isPdf)) {
-    try {
-      console.log('[PrintPreview] 预渲染 PDFs 为图片')
-      pdfImageCache = await renderPdfInvoices()
-      console.log('[PrintPreview] PDF 渲染完成')
-    } catch (error) {
-      console.error('[PrintPreview] PDF 渲染失败:', error)
-      const errorMsg = error instanceof Error ? error.message : '未知错误'
-      const shouldContinue = confirm(
-        `PDF 转换失败: ${errorMsg}\n\n` +
-        `是否继续使用原始 PDF 打印？\n` +
-        `（注意：原始 PDF 打印质量可能不如转换后的图片）`
-      )
-
-      if (!shouldContinue) {
-        return // 取消打印
-      }
-      // 继续使用原始 iframe 方式作为降级方案
-    }
-  }
-
-  // 关闭模态框以移除遮罩层，避免干扰打印对话框
-  console.log('[PrintPreview] 关闭模态框')
-  isOpen.value = false
-
-  // 直接打开新窗口进行打印
+  // 立即打开新窗口（在任何异步操作之前），避免被浏览器阻止
   // A4纸张尺寸: 210mm x 297mm
   // 使用更高的DPI (150dpi) 来提高打印质量: 210mm * 150/25.4 ≈ 1240px, 297mm * 150/25.4 ≈ 1754px
   console.log('[PrintPreview] 打开新窗口')
@@ -635,6 +614,77 @@ const handlePrint = async () => {
     return
   }
   console.log('[PrintPreview] 新窗口已打开')
+
+  // 在新窗口中显示加载提示
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>正在准备打印...</title>
+        <style>
+          body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f5f5f5;
+          }
+          .loading {
+            text-align: center;
+          }
+          .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>正在准备打印内容，请稍候...</p>
+        </div>
+      </body>
+    </html>
+  `)
+
+  // 渲染 PDFs 到图片（如果需要）
+  let pdfImageCache: Map<string, string> | null = null
+  if (includePrintInvoices.value && invoiceImages.value.some(inv => inv.isPdf)) {
+    try {
+      console.log('[PrintPreview] 预渲染 PDFs 为图片')
+      pdfImageCache = await renderPdfInvoices()
+      console.log('[PrintPreview] PDF 渲染完成')
+    } catch (error) {
+      console.error('[PrintPreview] PDF 渲染失败:', error)
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+
+      // 在新窗口中显示错误信息
+      printWindow.document.body.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+          <h3 style="color: #e74c3c;">PDF 转换失败</h3>
+          <p>${errorMsg}</p>
+          <p>请关闭此窗口并重试</p>
+        </div>
+      `
+
+      alert(`PDF 转换失败: ${errorMsg}`)
+      return
+    }
+  }
+
+  // 关闭模态框以移除遮罩层，避免干扰打印对话框
+  console.log('[PrintPreview] 关闭模态框')
+  isOpen.value = false
 
   // 克隆报销单内容并将输入框的值设置为 value 属性
   console.log('[PrintPreview] 克隆打印内容')
@@ -808,7 +858,9 @@ const handlePrint = async () => {
             }
 
             .invoice-item {
-              display: block;
+              display: flex;
+              align-items: center;
+              justify-content: center;
               overflow: hidden;
               page-break-inside: avoid;
               padding: 0;
@@ -824,14 +876,15 @@ const handlePrint = async () => {
               height: calc(50vh - 3px);
             }
 
-            /* 发票图片宽度占满，高度自适应 */
+            /* 发票图片最长边自适应，左右上下居中 */
             .invoice-image {
-              width: 100%;
-              height: auto;
               max-width: 100%;
+              max-height: 100%;
+              width: auto;
+              height: auto;
               display: block;
               object-fit: contain;
-              object-position: top center;
+              object-position: center center;
               /* 使用高质量的图片渲染，避免模糊 */
               image-rendering: -webkit-optimize-contrast;
               image-rendering: high-quality;
