@@ -325,17 +325,6 @@ const initializeItems = () => {
   const transportItems = items.filter(item => item.category === '飞机' || item.category === '火车')
   const otherItems = items.filter(item => item.category !== '飞机' && item.category !== '火车')
 
-  // 车船费按日期分组
-  const transportByDate = new Map<string, typeof items>()
-  transportItems.forEach(item => {
-    const date = new Date(item.date)
-    const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
-    if (!transportByDate.has(dateKey)) {
-      transportByDate.set(dateKey, [])
-    }
-    transportByDate.get(dateKey)!.push(item)
-  })
-
   // 其他费用按类型分组
   const otherByCategory = new Map<string, typeof items>()
   otherItems.forEach(item => {
@@ -346,30 +335,25 @@ const initializeItems = () => {
     otherByCategory.get(categoryKey)!.push(item)
   })
 
-  // 生成车船费行数据
-  const transportRows = Array.from(transportByDate.values()).map(dateItems => {
-    const firstItem = dateItems[0]
-    const date = new Date(firstItem.date)
+  // 生成车船费行数据 - 每张票据独立一行，不合并
+  const transportRows = transportItems.map(item => {
+    const date = new Date(item.date)
     const month = String(date.getMonth() + 1)
     const day = String(date.getDate())
     const hours = String(date.getHours()).padStart(2, '0')
-
-    const totalTransportFee = dateItems.reduce((sum, item) => sum + item.amount, 0)
-    const totalTransportInvoices = dateItems.reduce((sum, item) => sum + (item.invoiceBoxes?.length || 0), 0)
-    const transportTypes = dateItems.map(item => item.category).join('/')
 
     return {
       departureMonth: month,
       departureDay: day,
       departureTime: hours,
-      departurePlace: firstItem.departure || '',
+      departurePlace: item.departure || '',
       arrivalMonth: month,
       arrivalDay: day,
       arrivalTime: hours,
-      arrivalPlace: firstItem.arrival || '',
-      transportation: transportTypes,
-      invoiceCount: String(totalTransportInvoices),
-      transportFee: totalTransportFee.toFixed(2),
+      arrivalPlace: item.arrival || '',
+      transportation: item.category,
+      invoiceCount: String(item.invoiceBoxes?.length || 0),
+      transportFee: item.amount.toFixed(2),
       mealDays: '',
       mealRatePerDay: '',
       mealAmount: '',

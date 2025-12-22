@@ -309,11 +309,14 @@ const handleLinkInvoiceBox = (item: ExpenseItem) => {
   showInvoiceBoxSelector.value = true
 }
 
-const handleInvoiceBoxSelected = async (invoiceBox: InvoiceBox) => {
-  if (!linkingItem.value) return
+const handleInvoiceBoxSelected = async (invoices: InvoiceBox[]) => {
+  if (!linkingItem.value || invoices.length === 0) return
 
   try {
-    await linkInvoiceBox(id, linkingItem.value.id, invoiceBox.id)
+    // Link all selected invoices to the expense item
+    for (const invoice of invoices) {
+      await linkInvoiceBox(id, linkingItem.value.id, invoice.id)
+    }
     showInvoiceBoxSelector.value = false
     linkingItem.value = null
     await loadReimbursement()

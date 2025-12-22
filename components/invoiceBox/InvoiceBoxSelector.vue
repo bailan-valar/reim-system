@@ -7,7 +7,7 @@
           <div>
             <h2 class="text-2xl font-bold">从发票箱选择发票</h2>
             <p class="text-sm text-gray-500 mt-1">
-              选择一张未使用的发票关联到此费用项目
+              选择一张或多张未使用的发票关联到此费用项目
               <span v-if="expenseAmount" class="font-medium text-blue-600">（费用金额: ¥{{ formatAmount(expenseAmount) }}）</span>
             </p>
           </div>
@@ -121,10 +121,16 @@
           <div
             v-for="invoice in filteredInvoices"
             :key="invoice.id"
-            @click="selectInvoice(invoice)"
-            class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-500"
-            :class="selectedInvoice?.id === invoice.id ? 'border-blue-500 bg-blue-50' : 'border-transparent'"
+            @click="toggleInvoiceSelection(invoice)"
+            class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-500 relative"
+            :class="isInvoiceSelected(invoice.id) ? 'border-blue-500 bg-blue-50' : 'border-transparent'"
           >
+            <!-- Selection checkbox indicator -->
+            <div v-if="isInvoiceSelected(invoice.id)" class="absolute top-2 left-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
             <!-- Status badge -->
             <div class="flex justify-between items-start mb-3">
               <span class="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -188,10 +194,20 @@
       <div class="p-6 border-t bg-gray-50">
         <div class="flex justify-between items-center">
           <div class="text-sm text-gray-600">
-            <span v-if="selectedInvoice">已选择: {{ selectedInvoice.invoiceNumber }}</span>
-            <span v-else>请选择一张发票</span>
+            <div v-if="selectedInvoices.length > 0">
+              <p class="font-medium">已选择 {{ selectedInvoices.length }} 张发票</p>
+              <p class="text-xs text-gray-500 mt-1">总金额: ¥{{ formatAmount(totalSelectedAmount) }}</p>
+            </div>
+            <span v-else>请选择一张或多张发票</span>
           </div>
           <div class="flex gap-3">
+            <button
+              v-if="selectedInvoices.length > 0"
+              @click="clearAllSelections"
+              class="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg"
+            >
+              清除选择
+            </button>
             <button
               @click="$emit('close')"
               class="px-4 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg"
@@ -200,7 +216,7 @@
             </button>
             <button
               @click="confirmSelection"
-              :disabled="!selectedInvoice"
+              :disabled="selectedInvoices.length === 0"
               class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               确认选择
@@ -237,7 +253,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  select: [invoice: InvoiceBox]
+  select: [invoices: InvoiceBox[]]
 }>()
 
 const { fetchInvoiceBoxList } = useInvoiceBox()
@@ -245,7 +261,7 @@ const { fetchInvoiceBoxList } = useInvoiceBox()
 const loading = ref(false)
 const error = ref<string | null>(null)
 const invoices = ref<InvoiceBox[]>([])
-const selectedInvoice = ref<InvoiceBox | null>(null)
+const selectedInvoices = ref<InvoiceBox[]>([])
 const viewingInvoice = ref<InvoiceBox | null>(null)
 const showUploadModal = ref(false)
 const searchQuery = ref('')
@@ -416,8 +432,31 @@ const filteredInvoices = computed(() => {
   return result
 })
 
-function selectInvoice(invoice: InvoiceBox) {
-  selectedInvoice.value = invoice
+// Computed property for total selected amount
+const totalSelectedAmount = computed(() => {
+  return selectedInvoices.value.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
+})
+
+// Check if an invoice is selected
+function isInvoiceSelected(invoiceId: string): boolean {
+  return selectedInvoices.value.some(inv => inv.id === invoiceId)
+}
+
+// Toggle invoice selection
+function toggleInvoiceSelection(invoice: InvoiceBox) {
+  const index = selectedInvoices.value.findIndex(inv => inv.id === invoice.id)
+  if (index > -1) {
+    // Already selected, remove it
+    selectedInvoices.value.splice(index, 1)
+  } else {
+    // Not selected, add it
+    selectedInvoices.value.push(invoice)
+  }
+}
+
+// Clear all selections
+function clearAllSelections() {
+  selectedInvoices.value = []
 }
 
 function viewInvoice(invoice: InvoiceBox) {
@@ -425,8 +464,8 @@ function viewInvoice(invoice: InvoiceBox) {
 }
 
 function confirmSelection() {
-  if (selectedInvoice.value) {
-    emit('select', selectedInvoice.value)
+  if (selectedInvoices.value.length > 0) {
+    emit('select', selectedInvoices.value)
   }
 }
 
@@ -447,13 +486,14 @@ async function handleUploadSuccess(uploadedInvoiceIds?: string[]) {
   showUploadModal.value = false
   await loadInvoices()
 
-  // Auto-select the first uploaded invoice
+  // Auto-select all uploaded invoices
   if (uploadedInvoiceIds && uploadedInvoiceIds.length > 0) {
-    const firstUploadedId = uploadedInvoiceIds[0]
-    const uploadedInvoice = invoices.value.find(inv => inv.id === firstUploadedId)
-    if (uploadedInvoice) {
-      selectedInvoice.value = uploadedInvoice
-    }
+    uploadedInvoiceIds.forEach(uploadedId => {
+      const uploadedInvoice = invoices.value.find(inv => inv.id === uploadedId)
+      if (uploadedInvoice && !isInvoiceSelected(uploadedId)) {
+        selectedInvoices.value.push(uploadedInvoice)
+      }
+    })
   }
 }
 

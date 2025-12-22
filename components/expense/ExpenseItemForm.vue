@@ -15,24 +15,30 @@
           选择发票
         </button>
       </div>
-      <div v-if="selectedInvoice" class="bg-white rounded-lg p-3 border border-blue-300">
-        <div class="flex items-start justify-between">
-          <div class="flex-1 space-y-1">
-            <p class="text-sm font-medium text-gray-900">{{ selectedInvoice.invoiceNumber }}</p>
-            <p class="text-xs text-gray-600">{{ selectedInvoice.invoiceType }}</p>
-            <p class="text-sm font-semibold text-blue-600">¥{{ selectedInvoice.totalAmount.toFixed(2) }}</p>
-            <p class="text-xs text-gray-500">开票日期: {{ formatDate(selectedInvoice.invoiceDate) }}</p>
+      <div v-if="selectedInvoices.length > 0" class="space-y-2">
+        <div v-for="invoice in selectedInvoices" :key="invoice.id" class="bg-white rounded-lg p-3 border border-blue-300">
+          <div class="flex items-start justify-between">
+            <div class="flex-1 space-y-1">
+              <p class="text-sm font-medium text-gray-900">{{ invoice.invoiceNumber }}</p>
+              <p class="text-xs text-gray-600">{{ invoice.invoiceType }}</p>
+              <p class="text-sm font-semibold text-blue-600">¥{{ invoice.totalAmount.toFixed(2) }}</p>
+              <p class="text-xs text-gray-500">开票日期: {{ formatDate(invoice.invoiceDate) }}</p>
+            </div>
+            <button
+              type="button"
+              @click="removeInvoice(invoice.id)"
+              class="text-gray-400 hover:text-red-600"
+              title="移除此发票"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            type="button"
-            @click="clearSelectedInvoice"
-            class="text-gray-400 hover:text-red-600"
-            title="清除选择"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        </div>
+        <div class="bg-blue-100 rounded-lg p-2 text-sm">
+          <p class="font-medium text-blue-900">已选择 {{ selectedInvoices.length }} 张发票</p>
+          <p class="text-xs text-blue-700">总金额: ¥{{ totalInvoiceAmount.toFixed(2) }}</p>
         </div>
       </div>
       <p v-else class="text-xs text-gray-500">选择发票后将自动填充金额、日期和类别信息</p>
@@ -148,7 +154,7 @@ const emit = defineEmits<{
 }>()
 
 const showInvoiceSelector = ref(false)
-const selectedInvoice = ref<InvoiceBox | null>(null)
+const selectedInvoices = ref<InvoiceBox[]>([])
 
 const getDefaultDate = () => {
   if (props.item?.date) {
@@ -181,6 +187,11 @@ const errors = reactive({
 // Computed property to show/hide travel fields
 const showTravelFields = computed(() => {
   return formData.category === '火车' || formData.category === '飞机'
+})
+
+// Computed property for total invoice amount
+const totalInvoiceAmount = computed(() => {
+  return selectedInvoices.value.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
 })
 
 const categoryOptions = EXPENSE_CATEGORIES.map(category => ({
@@ -229,44 +240,66 @@ const mapInvoiceCategoryToFormCategory = (expenseCategory?: string | null): stri
   return '其他'
 }
 
-// Handle invoice selection
-const handleInvoiceSelected = (invoice: InvoiceBox) => {
-  selectedInvoice.value = invoice
+// Handle invoice selection (multiple invoices)
+const handleInvoiceSelected = (invoices: InvoiceBox[]) => {
+  selectedInvoices.value = invoices
   showInvoiceSelector.value = false
 
-  // Auto-fill form data from invoice
-  formData.amount = invoice.totalAmount.toString()
-  formData.date = new Date(invoice.invoiceDate).toISOString().split('T')[0]
+  if (invoices.length === 0) return
+
+  // Auto-fill form data from the first invoice or aggregate data
+  const firstInvoice = invoices[0]
+
+  // Calculate total amount from all selected invoices
+  const totalAmount = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
+  formData.amount = totalAmount.toString()
+
+  // Use the date from the first invoice
+  formData.date = new Date(firstInvoice.invoiceDate).toISOString().split('T')[0]
   formData.hasInvoice = true
 
-  // Map invoice expense category to form category
-  if (invoice.expenseCategory) {
-    const mappedCategory = mapInvoiceCategoryToFormCategory(invoice.expenseCategory)
+  // Map invoice expense category to form category (use first invoice's category)
+  if (firstInvoice.expenseCategory) {
+    const mappedCategory = mapInvoiceCategoryToFormCategory(firstInvoice.expenseCategory)
     if (mappedCategory) {
       formData.category = mappedCategory
     }
   }
 
   // Auto-fill description with invoice info
-  const descriptionParts = []
-  if (invoice.buyerName) {
-    descriptionParts.push(`购买方: ${invoice.buyerName}`)
-  }
-  if (invoice.expenseCategory) {
-    descriptionParts.push(`项目: ${invoice.expenseCategory}`)
-  }
-  if (invoice.remark) {
-    descriptionParts.push(invoice.remark)
-  }
-
-  if (descriptionParts.length > 0 && !formData.description) {
-    formData.description = descriptionParts.join(' | ')
+  if (!formData.description) {
+    if (invoices.length === 1) {
+      // Single invoice: show detailed info
+      const descriptionParts = []
+      if (firstInvoice.buyerName) {
+        descriptionParts.push(`购买方: ${firstInvoice.buyerName}`)
+      }
+      if (firstInvoice.expenseCategory) {
+        descriptionParts.push(`项目: ${firstInvoice.expenseCategory}`)
+      }
+      if (firstInvoice.remark) {
+        descriptionParts.push(firstInvoice.remark)
+      }
+      formData.description = descriptionParts.join(' | ')
+    } else {
+      // Multiple invoices: show summary
+      formData.description = `包含 ${invoices.length} 张发票，发票号: ${invoices.map(inv => inv.invoiceNumber).join(', ')}`
+    }
   }
 }
 
-// Clear selected invoice
-const clearSelectedInvoice = () => {
-  selectedInvoice.value = null
+// Remove a specific invoice from selection
+const removeInvoice = (invoiceId: string) => {
+  const index = selectedInvoices.value.findIndex(inv => inv.id === invoiceId)
+  if (index > -1) {
+    selectedInvoices.value.splice(index, 1)
+
+    // Recalculate amount if there are remaining invoices
+    if (selectedInvoices.value.length > 0) {
+      const totalAmount = selectedInvoices.value.reduce((sum, inv) => sum + inv.totalAmount, 0)
+      formData.amount = totalAmount.toString()
+    }
+  }
 }
 
 // Format date for display
@@ -325,9 +358,9 @@ const handleSubmit = () => {
     arrival: formData.arrival.trim() || undefined
   }
 
-  // Include selected invoice ID if available
-  if (selectedInvoice.value) {
-    submitData.invoiceBoxIds = [selectedInvoice.value.id]
+  // Include selected invoice IDs if available
+  if (selectedInvoices.value.length > 0) {
+    submitData.invoiceBoxIds = selectedInvoices.value.map(inv => inv.id)
   }
 
   emit('submit', submitData)
