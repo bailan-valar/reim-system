@@ -4,14 +4,39 @@
       ← 返回首页
     </NuxtLink>
     <div class="mb-6 flex justify-between items-center">
-      <h1 class="text-3xl font-bold">发票收集箱</h1>
-      <button
-        @click="showUploadModal = true"
-        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-      >
-        <span>+</span>
-        <span>上传发票</span>
-      </button>
+      <div class="flex items-center gap-4">
+        <h1 class="text-3xl font-bold">发票收集箱</h1>
+        <div v-if="selectedInvoiceIds.size > 0" class="flex items-center gap-2">
+          <span class="text-sm text-gray-600">
+            已选择 <span class="font-semibold text-blue-600">{{ selectedInvoiceIds.size }}</span> 项
+          </span>
+          <button
+            @click="clearSelection"
+            class="text-sm text-gray-600 hover:text-gray-800 underline"
+          >
+            取消选择
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="selectedInvoiceIds.size > 0"
+          @click="handleBatchDelete"
+          class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          <span>批量删除</span>
+        </button>
+        <button
+          @click="showUploadModal = true"
+          class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
+          <span>+</span>
+          <span>上传发票</span>
+        </button>
+      </div>
     </div>
 
     <!-- Filter tabs -->
@@ -150,6 +175,15 @@
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
+              <th scope="col" class="px-4 py-3 text-center">
+                <input
+                  type="checkbox"
+                  :checked="isAllSelected"
+                  @change="toggleSelectAll"
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  :disabled="filteredInvoices.length === 0"
+                />
+              </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 状态
               </th>
@@ -183,8 +217,20 @@
             <tr
               v-for="invoice in filteredInvoices"
               :key="invoice.id"
-              class="hover:bg-gray-50 transition-colors"
+              :class="[
+                'transition-colors',
+                selectedInvoiceIds.has(invoice.id) ? 'bg-blue-50' : 'hover:bg-gray-50'
+              ]"
             >
+              <td class="px-4 py-4 text-center">
+                <input
+                  type="checkbox"
+                  :checked="selectedInvoiceIds.has(invoice.id)"
+                  @change="toggleSelectInvoice(invoice.id)"
+                  :disabled="invoice.status === '已使用'"
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+              </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span
                   :class="[
@@ -316,6 +362,9 @@ const currentTab = ref<string>('all')
 const loading = ref(true)
 const invoices = ref<InvoiceBox[]>([])
 
+// Multi-select state
+const selectedInvoiceIds = ref<Set<string>>(new Set())
+
 // Filter state
 const filters = ref({
   searchText: '',
@@ -402,6 +451,16 @@ const filteredInvoices = computed(() => {
   return result
 })
 
+// Multi-select computed properties
+const selectableInvoices = computed(() => {
+  return filteredInvoices.value.filter(invoice => invoice.status === '未使用')
+})
+
+const isAllSelected = computed(() => {
+  if (selectableInvoices.value.length === 0) return false
+  return selectableInvoices.value.every(invoice => selectedInvoiceIds.value.has(invoice.id))
+})
+
 // Clear all filters
 function clearFilters() {
   filters.value = {
@@ -409,6 +468,53 @@ function clearFilters() {
     minAmount: null,
     maxAmount: null,
     selectedTag: ''
+  }
+}
+
+// Multi-select functions
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    // Deselect all
+    selectableInvoices.value.forEach(invoice => {
+      selectedInvoiceIds.value.delete(invoice.id)
+    })
+  } else {
+    // Select all selectable invoices
+    selectableInvoices.value.forEach(invoice => {
+      selectedInvoiceIds.value.add(invoice.id)
+    })
+  }
+}
+
+function toggleSelectInvoice(invoiceId: string) {
+  if (selectedInvoiceIds.value.has(invoiceId)) {
+    selectedInvoiceIds.value.delete(invoiceId)
+  } else {
+    selectedInvoiceIds.value.add(invoiceId)
+  }
+}
+
+function clearSelection() {
+  selectedInvoiceIds.value.clear()
+}
+
+async function handleBatchDelete() {
+  const count = selectedInvoiceIds.value.size
+  if (!confirm(`确定要删除选中的 ${count} 张发票吗？`)) {
+    return
+  }
+
+  try {
+    const deletePromises = Array.from(selectedInvoiceIds.value).map(id =>
+      $fetch(`/api/invoice-box/${id}`, { method: 'DELETE' })
+    )
+
+    await Promise.all(deletePromises)
+    clearSelection()
+    await fetchInvoices()
+  } catch (error: any) {
+    console.error('Failed to batch delete invoices:', error)
+    alert(error.data?.message || '批量删除发票失败')
   }
 }
 

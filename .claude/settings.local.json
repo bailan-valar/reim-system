@@ -70,7 +70,13 @@
       "Bash(powershell -Command:*)",
       "Bash(npx tsx:*)",
       "Bash(npx vue-tsc:*)",
-      "Bash(node test-pdf-to-image.js:*)"
+      "Bash(node test-pdf-to-image.js:*)",
+      "Bash(npx puppeteer:*)",
+      "Bash(node test-pdf-to-image-puppeteer.js:*)",
+      "Bash(node -e:*)",
+      "Bash(node test-pdf-to-image-pdfium.js:*)",
+      "Bash(npm view:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

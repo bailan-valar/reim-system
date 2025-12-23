@@ -126,6 +126,9 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
     } else if (subTypeDesc === '电子发票(铁路电子客票)') {
       // 铁路电子客票归类为增值税电子普通发票
       result.invoiceType = '增值税电子普通发票'
+    } else if (subTypeDesc === '增值税电子普通发票(通行费)') {
+      // 通行费发票归类为增值税电子普通发票
+      result.invoiceType = '增值税电子普通发票'
     } else {
       result.invoiceType = subTypeDesc || invoiceItem.TypeDescription || invoiceItem.Type
     }
@@ -148,6 +151,7 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
     singleInvoiceInfos.VatElectronicSpecialInvoice ||
     singleInvoiceInfos.VatElectronicInvoiceFull ||
     singleInvoiceInfos.VatElectronicSpecialInvoiceFull ||
+    singleInvoiceInfos.VatElectronicInvoiceToll ||
     singleInvoiceInfos.ElectronicTrainTicketFull ||
     singleInvoiceInfos.ElectronicFlightTicketFull ||
     singleInvoiceInfos.TaxiTicket ||
@@ -245,6 +249,19 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
       result.taxRate = parseTaxRate(taxRateValue)
       console.log('[TENCENT-OCR] Tax rate:', result.taxRate, '(from TaxRate field)')
     }
+  } else if (invoiceInfo.VatInvoiceItemInfos && invoiceInfo.VatInvoiceItemInfos.length > 0) {
+    // Extract from first item for toll invoices
+    const firstItem = invoiceInfo.VatInvoiceItemInfos[0]
+    if (firstItem.TaxRate) {
+      const taxRateValue = firstItem.TaxRate.trim()
+      if (taxRateValue === '' || taxRateValue === '0' || taxRateValue === '0%') {
+        result.taxRate = 0
+        console.log('[TENCENT-OCR] Tax rate: 0 (empty or zero from toll items)')
+      } else {
+        result.taxRate = parseTaxRate(taxRateValue)
+        console.log('[TENCENT-OCR] Tax rate:', result.taxRate, '(from VatInvoiceItemInfos[0].TaxRate:', firstItem.TaxRate, ')')
+      }
+    }
   } else if (invoiceInfo.VatElectronicItems && invoiceInfo.VatElectronicItems.length > 0) {
     // Extract from first item for electronic invoices
     const firstItem = invoiceInfo.VatElectronicItems[0]
@@ -289,7 +306,15 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
     result.expenseCategory = invoiceInfo.Name
     console.log('[TENCENT-OCR] Expense category (from Name field):', result.expenseCategory)
   }
-  // Priority 2: Extract from VatElectronicItems[0].Name for electronic invoices
+  // Priority 2: Extract from VatInvoiceItemInfos[0].Name for toll invoices
+  else if (invoiceInfo.VatInvoiceItemInfos && invoiceInfo.VatInvoiceItemInfos.length > 0) {
+    const firstItem = invoiceInfo.VatInvoiceItemInfos[0]
+    if (firstItem.Name && firstItem.Name.trim() !== '') {
+      result.expenseCategory = firstItem.Name
+      console.log('[TENCENT-OCR] Expense category (from VatInvoiceItemInfos[0].Name):', result.expenseCategory)
+    }
+  }
+  // Priority 3: Extract from VatElectronicItems[0].Name for electronic invoices
   else if (invoiceInfo.VatElectronicItems && invoiceInfo.VatElectronicItems.length > 0) {
     const firstItem = invoiceInfo.VatElectronicItems[0]
     if (firstItem.Name && firstItem.Name.trim() !== '') {
@@ -351,7 +376,45 @@ function parseGeneralInvoiceResponse(response: any): Partial<TencentInvoiceResul
     console.log('[TENCENT-OCR] Remark (Flight):', result.remark)
   }
 
-  // Priority 4: For taxi tickets: Date + " " + Start + "->" + End
+  // Priority 4: For toll invoices: extract from VatInvoiceItemInfos
+  else if (invoiceInfo.VatInvoiceItemInfos && invoiceInfo.VatInvoiceItemInfos.length > 0) {
+    const firstItem = invoiceInfo.VatInvoiceItemInfos[0]
+    const remarkParts = []
+
+    // 通行费标识
+    remarkParts.push("通行费：")
+
+    // 通行日期
+    if (firstItem.DateStart && firstItem.DateEnd) {
+      if (firstItem.DateStart === firstItem.DateEnd) {
+        // 同一天
+        remarkParts.push(firstItem.DateStart)
+      } else {
+        // 跨天
+        remarkParts.push(`${firstItem.DateStart}-${firstItem.DateEnd}`)
+      }
+    }
+
+    // 车牌号
+    if (firstItem.LicensePlate) {
+      remarkParts.push(firstItem.LicensePlate)
+    }
+
+    // 车辆类型
+    if (firstItem.VehicleType) {
+      remarkParts.push(firstItem.VehicleType)
+    }
+
+    // 费用项目名称
+    if (firstItem.Name) {
+      remarkParts.push(firstItem.Name)
+    }
+
+    result.remark = remarkParts.join(' ')
+    console.log('[TENCENT-OCR] Remark (Toll):', result.remark)
+  }
+
+  // Priority 5: For taxi tickets: Date + " " + Start + "->" + End
   else if (invoiceInfo.Date && invoiceInfo.Start && invoiceInfo.End) {
     result.remark = `${invoiceInfo.Date} ${invoiceInfo.Start}->${invoiceInfo.End}`
     console.log('[TENCENT-OCR] Remark (Taxi):', result.remark)
@@ -461,6 +524,7 @@ export async function recognizeInvoiceWithTencent(
         singleInvoiceInfos.VatElectronicSpecialInvoice ||
         singleInvoiceInfos.VatElectronicInvoiceFull ||
         singleInvoiceInfos.VatElectronicSpecialInvoiceFull ||
+        singleInvoiceInfos.VatElectronicInvoiceToll ||
         singleInvoiceInfos.ElectronicTrainTicketFull ||
         singleInvoiceInfos.ElectronicFlightTicketFull ||
         singleInvoiceInfos.TaxiTicket ||

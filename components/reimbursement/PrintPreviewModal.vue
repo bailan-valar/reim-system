@@ -216,28 +216,70 @@
       </div>
 
       <!-- PDF 渲染进度提示 -->
-      <div v-if="isRenderingPdfs" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <h3 class="text-lg font-semibold text-gray-900">正在转换 PDF...</h3>
+      <div v-if="isRenderingPdfs" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl transform transition-all">
+          <div class="flex items-center gap-4 mb-6">
+            <div class="relative">
+              <div class="animate-spin rounded-full h-12 w-12 border-4 border-gray-200"></div>
+              <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent absolute top-0 left-0"></div>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900">正在转换 PDF</h3>
+              <p class="text-sm text-gray-500 mt-1">请稍候，不要关闭窗口</p>
+            </div>
           </div>
 
-          <div class="space-y-3">
-            <p class="text-sm text-gray-600">
+          <div class="space-y-4">
+            <p class="text-sm text-gray-600 leading-relaxed">
               正在将 PDF 发票转换为高清图片以确保打印质量
             </p>
 
-            <!-- Progress bar -->
-            <div class="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                class="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
-                :style="{ width: `${(renderProgress.current / renderProgress.total) * 100}%` }"
-              ></div>
+            <!-- 当前正在转换的文件 -->
+            <div v-if="renderProgress.currentFileName" class="p-3 bg-gradient-to-r from-primary-50 to-blue-50 rounded-lg border border-primary-100">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-primary-600 flex-shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs text-primary-600 font-medium mb-0.5">正在转换</p>
+                  <p class="text-sm text-gray-900 font-medium truncate" :title="renderProgress.currentFileName">
+                    {{ renderProgress.currentFileName }}
+                  </p>
+                </div>
+              </div>
             </div>
-            <p class="text-xs text-gray-500 text-center">
-              {{ renderProgress.current }} / {{ renderProgress.total }}
-            </p>
+
+            <!-- Progress bar -->
+            <div class="relative">
+              <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  class="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-500 ease-out relative"
+                  :style="{ width: `${(renderProgress.current / renderProgress.total) * 100}%` }"
+                >
+                  <div class="absolute inset-0 bg-white opacity-30 animate-pulse"></div>
+                  <!-- 流动光效 -->
+                  <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-shimmer"></div>
+                </div>
+              </div>
+              <div class="flex justify-between items-center mt-2">
+                <p class="text-sm font-medium text-gray-700">
+                  {{ renderProgress.current }} / {{ renderProgress.total }} 张
+                </p>
+                <p class="text-sm font-semibold text-primary-600">
+                  {{ Math.round((renderProgress.current / renderProgress.total) * 100) }}%
+                </p>
+              </div>
+            </div>
+
+            <!-- 提示信息 -->
+            <div class="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+              </svg>
+              <p class="text-xs text-blue-800 leading-relaxed">
+                转换时间取决于 PDF 文件大小和数量，通常需要几秒钟
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -331,11 +373,8 @@ const includePrintLogo = ref(true)
 
 // PDF 渲染状态
 const isRenderingPdfs = ref(false)
-const renderProgress = ref({ current: 0, total: 0 })
+const renderProgress = ref({ current: 0, total: 0, currentFileName: '' })
 const renderError = ref<string | null>(null)
-
-// 渲染缓存
-const renderedPdfImages = ref<Map<string, string>>(new Map())
 
 // 初始化明细项
 const initializeItems = () => {
@@ -510,11 +549,11 @@ const handleClose = () => {
 }
 
 /**
- * Pre-render all PDF invoices to high-quality images using server-side conversion
- * This function is called before printing to convert PDFs to images
+ * Render PDF invoices to images using client-side PDF.js
+ * This replaces the old server-side conversion approach
  */
 const renderPdfInvoices = async (): Promise<Map<string, string>> => {
-  console.log('[PrintPreview] Starting PDF rendering process (server-side)')
+  console.log('[PrintPreview] Starting PDF rendering process (client-side PDF.js)')
 
   const pdfInvoices = invoiceImages.value.filter(inv => inv.isPdf)
 
@@ -524,58 +563,40 @@ const renderPdfInvoices = async (): Promise<Map<string, string>> => {
   }
 
   isRenderingPdfs.value = true
-  renderProgress.value = { current: 0, total: pdfInvoices.length }
+  renderProgress.value = { current: 0, total: pdfInvoices.length, currentFileName: '' }
   renderError.value = null
 
   const imageCache = new Map<string, string>()
 
   try {
+    // Import PDF renderer utility
+    const { renderPdfToImages } = await import('~/utils/pdfRenderer')
+
     for (let i = 0; i < pdfInvoices.length; i++) {
       const invoice = pdfInvoices[i]
+
+      // 更新当前正在转换的文件名
+      renderProgress.value.currentFileName = invoice.fileName
       console.log(`[PrintPreview] Rendering PDF ${i + 1}/${pdfInvoices.length}: ${invoice.fileName}`)
 
       try {
-        // Check if already cached
-        if (renderedPdfImages.value.has(invoice.url)) {
-          console.log(`[PrintPreview] Using cached image for ${invoice.fileName}`)
-          imageCache.set(invoice.url, renderedPdfImages.value.get(invoice.url)!)
-          renderProgress.value.current = i + 1
-          continue
-        }
-
-        // Call server-side API to convert PDF to image
-        const response = await $fetch('/api/pdf/convert-to-image', {
-          method: 'POST',
-          body: {
-            pdfPath: invoice.url,
-            pageNumber: 1,
-            scale: 2.0, // High quality scale
-            width: 1754, // A4 width at 150 DPI (210mm * 150/25.4)
-            height: 2480  // A4 height at 150 DPI (297mm * 150/25.4)
-          }
+        // Use client-side PDF.js to render PDF to images
+        const results = await renderPdfToImages(invoice.url, {
+          dpi: 150, // Good quality for printing
+          maxWidth: 4096,
+          maxHeight: 4096
         })
 
-        if (!response.success || !response.data) {
-          throw new Error('服务器返回无效响应')
+        // Use the first page (most invoices are single page)
+        if (results.length > 0) {
+          imageCache.set(invoice.url, results[0].dataUrl)
+          console.log(`[PrintPreview] Successfully rendered ${invoice.fileName}: ${results[0].width}x${results[0].height}px`)
         }
 
-        console.log(`[PrintPreview] Successfully rendered ${invoice.fileName}: ${response.data.width}x${response.data.height}px`)
-
-        // Cache the result
-        imageCache.set(invoice.url, response.data.dataUrl)
-        renderedPdfImages.value.set(invoice.url, response.data.dataUrl)
-
+        // 更新进度
         renderProgress.value.current = i + 1
       } catch (error: any) {
         console.error(`[PrintPreview] Failed to render ${invoice.fileName}:`, error)
-
-        // Handle specific error types
-        if (error.data?.code === 'FILE_NOT_FOUND') {
-          throw new Error(`无法找到 PDF 文件: ${invoice.fileName}`)
-        } else if (error.data?.code === 'MEMORY_ERROR') {
-          throw new Error(`PDF 文件过大，内存不足: ${invoice.fileName}`)
-        }
-
         throw new Error(`渲染 PDF 失败: ${invoice.fileName}`)
       }
     }
@@ -620,38 +641,142 @@ const handlePrint = async () => {
     <html>
       <head>
         <title>正在准备打印...</title>
+        <meta charset="UTF-8">
         <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
           body {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
           }
-          .loading {
+          .loading-container {
             text-align: center;
+            background: white;
+            padding: 48px 64px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.3s ease-out;
+          }
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .spinner-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 32px;
           }
           .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid #e5e7eb;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+          }
+          .spinner-animated {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid transparent;
+            border-top-color: #667eea;
+            border-right-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
           }
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
+          .loading-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+          }
+          .loading-text {
+            font-size: 15px;
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 24px;
+          }
+          .loading-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+          }
+          .dot {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+          }
+          .dot:nth-child(1) { animation-delay: -0.32s; }
+          .dot:nth-child(2) { animation-delay: -0.16s; }
+          @keyframes bounce {
+            0%, 80%, 100% {
+              transform: scale(0.8);
+              opacity: 0.5;
+            }
+            40% {
+              transform: scale(1.2);
+              opacity: 1;
+            }
+          }
+          .tip {
+            margin-top: 24px;
+            padding: 12px 20px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .tip-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+          }
         </style>
       </head>
       <body>
-        <div class="loading">
-          <div class="spinner"></div>
-          <p>正在准备打印内容，请稍候...</p>
+        <div class="loading-container">
+          <div class="spinner-wrapper">
+            <div class="spinner"></div>
+            <div class="spinner-animated"></div>
+          </div>
+          <h2 class="loading-title">正在准备打印</h2>
+          <p class="loading-text">正在加载打印内容，请稍候...</p>
+          <div class="loading-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <div class="tip">
+            <svg class="tip-icon" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <span>打印对话框将自动弹出</span>
+          </div>
         </div>
       </body>
     </html>
@@ -1128,9 +1253,7 @@ watch(() => props.modelValue, (newValue) => {
   } else {
     // 清理渲染状态
     renderError.value = null
-    renderProgress.value = { current: 0, total: 0 }
-    // 保留缓存以提升性能，如需清理可取消注释下一行
-    // renderedPdfImages.value.clear()
+    renderProgress.value = { current: 0, total: 0, currentFileName: '' }
   }
 })
 
@@ -1150,6 +1273,20 @@ onMounted(() => {
 
 .print-content {
   font-family: 'SimSun', '宋体', serif;
+}
+
+/* 流动光效动画 */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }
 
 /* 公司 Logo 样式 */

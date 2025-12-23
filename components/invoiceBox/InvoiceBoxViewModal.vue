@@ -179,14 +179,27 @@
 
           <!-- Invoice Preview -->
           <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-gray-900 border-b pb-2">发票预览</h3>
+            <div class="flex justify-between items-center border-b pb-2">
+              <h3 class="text-lg font-semibold text-gray-900">发票预览</h3>
+              <div v-if="isPDF && pdfDimensions" class="text-sm text-gray-600">
+                <span class="font-medium">尺寸:</span>
+                {{ Math.round(pdfDimensions.width) }} × {{ Math.round(pdfDimensions.height) }} px
+              </div>
+              <div v-else-if="isPDF && loadingDimensions" class="text-sm text-gray-500">
+                <span class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600 mr-1"></span>
+                获取尺寸中...
+              </div>
+            </div>
+                {{ invoice.filePath }}
 
             <div class="border rounded-lg overflow-hidden bg-gray-50">
               <div v-if="isPDF" class="aspect-[3/4] flex items-center justify-center">
                 <iframe
+                  ref="pdfIframe"
                   :src="invoice.filePath"
                   class="w-full h-full"
                   frameborder="0"
+                  @load="handlePdfLoad"
                 ></iframe>
               </div>
               <div v-else-if="isImage" class="aspect-[3/4] flex items-center justify-center p-4">
@@ -241,6 +254,7 @@
 
 <script setup lang="ts">
 import type { InvoiceBox } from '~/types/invoiceBox'
+import { waitForPdfDimensions, type PdfDimensions } from '~/utils/pdfDimensions'
 
 const props = defineProps<{
   invoice: InvoiceBox
@@ -254,6 +268,26 @@ const emit = defineEmits<{
 
 const unlinking = ref(false)
 const deleting = ref(false)
+const pdfIframe = ref<HTMLIFrameElement | null>(null)
+const pdfDimensions = ref<PdfDimensions | null>(null)
+const loadingDimensions = ref(false)
+
+async function handlePdfLoad() {
+  if (!pdfIframe.value) return
+
+  loadingDimensions.value = true
+  try {
+    const dimensions = await waitForPdfDimensions(pdfIframe.value)
+    if (dimensions) {
+      pdfDimensions.value = dimensions
+      console.log('[InvoiceBoxViewModal] PDF dimensions loaded:', dimensions)
+    }
+  } catch (error) {
+    console.error('[InvoiceBoxViewModal] Failed to get PDF dimensions:', error)
+  } finally {
+    loadingDimensions.value = false
+  }
+}
 
 async function handleUnlink() {
   if (!confirm('确定要取消与报销单的关联吗？取消后该发票将恢复为"未使用"状态。')) {

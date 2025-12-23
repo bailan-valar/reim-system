@@ -9,11 +9,13 @@ export function calculateInvoiceStatus(
     return hasInvoice ? '已开票待上传' : '未上传'
   }
 
-  const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  // 使用整数运算避免浮点数精度问题（转换为分）
+  const expenseAmountCents = Math.round(expenseAmount * 100)
+  const totalInvoiceAmountCents = invoices.reduce((sum, inv) => sum + Math.round(inv.amount * 100), 0)
 
-  if (totalInvoiceAmount < expenseAmount) {
+  if (totalInvoiceAmountCents < expenseAmountCents) {
     return '未完全上传'
-  } else if (totalInvoiceAmount === expenseAmount) {
+  } else if (totalInvoiceAmountCents === expenseAmountCents) {
     return '已上传'
   } else {
     return '已超出'  // 替票场景
