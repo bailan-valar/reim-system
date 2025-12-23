@@ -4,9 +4,9 @@
     <header class="bg-white shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div>
-          <NuxtLink to="/reimbursements" class="text-primary-600 hover:text-primary-700 text-sm font-medium mb-2 inline-block">
-            ← 返回列表
-          </NuxtLink>
+          <button @click="router.go(-1)" class="text-primary-600 hover:text-primary-700 text-sm font-medium mb-2 inline-block">
+            ← 返回
+          </button>
           <h1 class="text-3xl font-bold text-gray-900">创建报销单</h1>
         </div>
       </div>
@@ -41,7 +41,7 @@ const handleSubmit = async (data: CreateReimbursementInput) => {
   try {
     const reimbursement = await createReimbursement(data)
     if (reimbursement) {
-      navigateTo(`/reimbursements/${reimbursement.id}`)
+      navigateTo(`/reimbursements/${reimbursement.id}`, { replace: true })
     }
   } catch (error: any) {
     console.error('Failed to create reimbursement:', error)

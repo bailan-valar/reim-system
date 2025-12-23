@@ -991,14 +991,14 @@ const handlePrint = async () => {
               padding: 0;
               margin: 0;
               width: 100%;
-              height: calc(50vh - 2px);
+              height: 148mm;  /* A4 高度 297mm 的一半，减去分割线 */
               box-sizing: border-box;
               border-top: 1px dashed #d1d5db;
             }
 
             .invoice-item:first-child {
               border-top: none;
-              height: calc(50vh - 3px);
+              height: 148.5mm;  /* 第一张稍微高一点，补偿分割线 */
             }
 
             /* 发票图片最长边自适应，左右上下居中 */

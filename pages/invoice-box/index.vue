@@ -21,6 +21,16 @@
       <div class="flex items-center gap-2">
         <button
           v-if="selectedInvoiceIds.size > 0"
+          @click="showBatchTagModal = true"
+          class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <span>批量标签</span>
+        </button>
+        <button
+          v-if="selectedInvoiceIds.size > 0"
           @click="handleBatchDelete"
           class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
         >
@@ -344,6 +354,105 @@
       @unlinked="handleUnlinked"
       @deleted="handleDeleted"
     />
+
+    <!-- Batch Tag Modal -->
+    <div
+      v-if="showBatchTagModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="showBatchTagModal = false"
+    >
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">批量标签管理</h3>
+            <button
+              @click="showBatchTagModal = false"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 mb-4">
+              已选择 <span class="font-semibold text-blue-600">{{ selectedInvoiceIds.size }}</span> 张发票
+            </p>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                标签内容
+              </label>
+              <input
+                v-model="batchTagInput"
+                type="text"
+                placeholder="请输入标签，多个标签用逗号分隔（如：差旅,北京,项目A）"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                更新模式
+              </label>
+              <div class="space-y-2">
+                <label class="flex items-center">
+                  <input
+                    v-model="batchTagMode"
+                    type="radio"
+                    value="add"
+                    class="mr-2"
+                  />
+                  <span class="text-sm">添加标签（保留原有标签，添加新标签）</span>
+                </label>
+                <label class="flex items-center">
+                  <input
+                    v-model="batchTagMode"
+                    type="radio"
+                    value="replace"
+                    class="mr-2"
+                  />
+                  <span class="text-sm">替换标签（删除原有标签，使用新标签）</span>
+                </label>
+              </div>
+            </div>
+
+            <div v-if="availableTags.length > 0" class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                常用标签（点击快速添加）
+              </label>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="tag in availableTags"
+                  :key="tag"
+                  @click="addQuickTag(tag)"
+                  class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded hover:bg-blue-100 transition-colors"
+                >
+                  {{ tag }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button
+              @click="showBatchTagModal = false"
+              class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              取消
+            </button>
+            <button
+              @click="handleBatchUpdateTags"
+              :disabled="!batchTagInput.trim()"
+              class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -364,6 +473,11 @@ const invoices = ref<InvoiceBox[]>([])
 
 // Multi-select state
 const selectedInvoiceIds = ref<Set<string>>(new Set())
+
+// Batch tag state
+const showBatchTagModal = ref(false)
+const batchTagInput = ref('')
+const batchTagMode = ref<'add' | 'replace'>('add')
 
 // Filter state
 const filters = ref({
@@ -515,6 +629,52 @@ async function handleBatchDelete() {
   } catch (error: any) {
     console.error('Failed to batch delete invoices:', error)
     alert(error.data?.message || '批量删除发票失败')
+  }
+}
+
+async function handleBatchUpdateTags() {
+  const count = selectedInvoiceIds.value.size
+  const tags = batchTagInput.value.trim()
+
+  if (!tags) {
+    alert('请输入标签内容')
+    return
+  }
+
+  try {
+    const response = await $fetch('/api/invoice-box/batch-update-tags', {
+      method: 'POST',
+      body: {
+        invoiceIds: Array.from(selectedInvoiceIds.value),
+        tags,
+        mode: batchTagMode.value
+      }
+    })
+
+    alert(response.message || '批量更新标签成功')
+    showBatchTagModal.value = false
+    batchTagInput.value = ''
+    batchTagMode.value = 'add'
+    clearSelection()
+    await fetchInvoices()
+  } catch (error: any) {
+    console.error('Failed to batch update tags:', error)
+    alert(error.data?.message || '批量更新标签失败')
+  }
+}
+
+function addQuickTag(tag: string) {
+  const currentTags = batchTagInput.value
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t.length > 0)
+
+  if (!currentTags.includes(tag)) {
+    if (currentTags.length > 0) {
+      batchTagInput.value = [...currentTags, tag].join(',')
+    } else {
+      batchTagInput.value = tag
+    }
   }
 }
 

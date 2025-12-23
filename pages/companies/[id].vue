@@ -241,7 +241,7 @@ const company = ref<CompanyWithDetails | null>(null)
 const showEditModal = ref(false)
 
 // Sorting state
-const sortBy = ref<'title' | 'type' | 'status' | 'totalAmount' | 'startDate' | 'createdAt'>('createdAt')
+const sortBy = ref<'title' | 'type' | 'status' | 'totalAmount' | 'startDate' | 'createdAt'>('startDate')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 
 const loadCompany = async () => {
