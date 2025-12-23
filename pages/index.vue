@@ -141,6 +141,13 @@
         </UiCard>
       </div>
 
+      <!-- Statistics Chart -->
+      <div class="mb-8">
+        <UiCard>
+          <ReimbursementStatsChart />
+        </UiCard>
+      </div>
+
       <!-- Recent Reimbursements -->
       <div class="space-y-4">
         <div class="flex items-center justify-between">
