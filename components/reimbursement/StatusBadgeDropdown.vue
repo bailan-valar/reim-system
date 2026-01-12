@@ -2,6 +2,7 @@
   <div class="relative" ref="dropdownRef">
     <button
       type="button"
+      ref="buttonRef"
       :class="badgeClasses"
       @click.stop="toggleDropdown"
       :disabled="loading"
@@ -29,47 +30,51 @@
       </svg>
     </button>
 
-    <!-- Dropdown Menu -->
-    <Transition
-      enter-active-class="transition ease-out duration-100"
-      enter-from-class="transform opacity-0 scale-95"
-      enter-to-class="transform opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-75"
-      leave-from-class="transform opacity-100 scale-100"
-      leave-to-class="transform opacity-0 scale-95"
-    >
-      <div
-        v-if="isOpen"
-        class="absolute left-1/2 -translate-x-1/2 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 z-[100]"
+    <!-- Dropdown Menu - Teleported to body -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-100"
+        enter-from-class="transform opacity-0 scale-95"
+        enter-to-class="transform opacity-100 scale-100"
+        leave-active-class="transition ease-in duration-75"
+        leave-from-class="transform opacity-100 scale-100"
+        leave-to-class="transform opacity-0 scale-95"
       >
-        <div class="py-2 px-1 flex flex-col" role="menu">
-          <button
-            v-for="statusOption in REIMBURSEMENT_STATUSES"
-            :key="statusOption"
-            type="button"
-            @click.stop="handleStatusChange(statusOption)"
-            :disabled="statusOption === status || loading"
-            :class="[
-              'w-full text-left px-3 py-2 text-sm transition-all rounded-md mb-1 last:mb-0',
-              statusOption === status
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-gray-50 cursor-pointer hover:scale-[1.02]'
-            ]"
-            role="menuitem"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <span :class="[
-                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                getStatusColorClass(statusOption)
-              ]">
-                {{ statusOption }}
-              </span>
-              <span v-if="statusOption === status" class="text-primary-600 text-sm font-bold">✓</span>
-            </div>
-          </button>
+        <div
+          v-if="isOpen"
+          ref="menuRef"
+          :style="menuStyle"
+          class="fixed w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 z-[9999]"
+        >
+          <div class="py-2 px-1 flex flex-col" role="menu">
+            <button
+              v-for="statusOption in REIMBURSEMENT_STATUSES"
+              :key="statusOption"
+              type="button"
+              @click.stop="handleStatusChange(statusOption)"
+              :disabled="statusOption === status || loading"
+              :class="[
+                'w-full text-left px-3 py-2 text-sm transition-all rounded-md mb-1 last:mb-0',
+                statusOption === status
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-gray-50 cursor-pointer hover:scale-[1.02]'
+              ]"
+              role="menuitem"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <span :class="[
+                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
+                  getStatusColorClass(statusOption)
+                ]">
+                  {{ statusOption }}
+                </span>
+                <span v-if="statusOption === status" class="text-primary-600 text-sm font-bold">✓</span>
+              </div>
+            </button>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -91,11 +96,26 @@ const { updateReimbursement } = useReimbursements()
 const isOpen = ref(false)
 const loading = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
+const buttonRef = ref<HTMLElement | null>(null)
+const menuRef = ref<HTMLElement | null>(null)
 
 const badgeClasses = computed(() => {
   const base = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium'
   const colorClass = STATUS_COLORS[props.status] || 'bg-gray-100 text-gray-800'
   return `${base} ${colorClass}`
+})
+
+// 计算菜单位置
+const menuStyle = computed(() => {
+  if (!buttonRef.value) return {}
+
+  const rect = buttonRef.value.getBoundingClientRect()
+  const menuWidth = 192 // w-48 = 12rem = 192px
+
+  return {
+    top: `${rect.bottom + 8}px`,
+    left: `${rect.left + rect.width / 2 - menuWidth / 2}px`,
+  }
 })
 
 const getStatusColorClass = (status: ReimbursementStatus) => {
@@ -104,10 +124,27 @@ const getStatusColorClass = (status: ReimbursementStatus) => {
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    // 强制更新位置
+    nextTick(() => {
+      updateMenuPosition()
+    })
+  }
 }
 
 const closeDropdown = () => {
   isOpen.value = false
+}
+
+// 更新菜单位置
+const updateMenuPosition = () => {
+  if (!buttonRef.value || !menuRef.value) return
+
+  const rect = buttonRef.value.getBoundingClientRect()
+  const menuWidth = 192 // w-48 = 12rem = 192px
+
+  menuRef.value.style.top = `${rect.bottom + 8}px`
+  menuRef.value.style.left = `${rect.left + rect.width / 2 - menuWidth / 2}px`
 }
 
 const handleStatusChange = async (newStatus: ReimbursementStatus) => {
@@ -133,15 +170,36 @@ const handleStatusChange = async (newStatus: ReimbursementStatus) => {
 // Close dropdown when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
   if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+    // 检查点击是否在菜单内
+    if (menuRef.value && menuRef.value.contains(event.target as Node)) {
+      return
+    }
     closeDropdown()
+  }
+}
+
+// 监听滚动和窗口大小变化，更新菜单位置
+const handleScroll = () => {
+  if (isOpen.value) {
+    updateMenuPosition()
+  }
+}
+
+const handleResize = () => {
+  if (isOpen.value) {
+    updateMenuPosition()
   }
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleScroll, true)
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleScroll, true)
+  window.removeEventListener('resize', handleResize)
 })
 </script>

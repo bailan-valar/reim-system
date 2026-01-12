@@ -99,7 +99,7 @@
               <p class="mt-2 text-sm text-gray-600">暂无关联的报销单</p>
             </div>
 
-            <div v-else class="overflow-x-auto">
+            <div v-else class="overflow-x-auto overflow-y-visible">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr>
@@ -395,7 +395,14 @@ const toggleSort = (field: 'title' | 'type' | 'status' | 'totalAmount' | 'startD
 
 // Handle status change
 const handleStatusChanged = async () => {
+  // 保存当前滚动位置
+  const scrollY = window.scrollY
+
   await loadCompany()
+
+  // 恢复滚动位置
+  await nextTick()
+  window.scrollTo(0, scrollY)
 }
 
 onMounted(() => {
