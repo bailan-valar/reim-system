@@ -12,7 +12,7 @@
 ![发票识别](./doc/screenshots/invoice-parse.png)
 ![费用项目](./doc/screenshots/expense.png)
 
-![有问题可以微信沟通](./doc/screenshots/wechat.png)
+![有问题可以微信沟通](./doc/screenshots/wechat.jpg)
 ## 项目简介
 
 这是一个为个人或小团队设计的报销管理系统，旨在简化报销流程，提高报销效率。系统提供了完整的报销单生命周期管理，从创建、整理、打印、审批到最终打款的全流程跟踪。
